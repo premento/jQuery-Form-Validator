@@ -1083,6 +1083,41 @@ calling $.validate()
  * Added function $.validationSetup() to reduce the amount of code that has to be written when initiating the form validation.
 
 
+## Development and Testing
+
+The local development and testing suite has been modernized to run on modern Node.js versions (tested and confirmed on **Node.js v26.2.0+**).
+
+### Installation
+
+To install all dependencies:
+```bash
+npm install
+```
+
+*Note: During installation, the postinstall/prepublish script will automatically download the required headless Chrome binaries into your Puppeteer cache and run the test/build suite.*
+
+### Running the Test Suite
+
+Unit tests are executed in a headless Chrome environment using QUnit and Puppeteer:
+```bash
+npx grunt test
+```
+
+Or run the default task to start a local test server and watch for file changes:
+```bash
+npx grunt
+```
+
+### Building the Project
+
+To compile and minify the files for production:
+```bash
+npx grunt build
+```
+
+This concatenates the plugins/modules, generates UMD wrappers, minifies CSS, and uglifies the JavaScript files under the `/form-validator` directory.
+
+
 ## Credits
 
 http://www.formvalidator.net/#credits
