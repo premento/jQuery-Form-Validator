@@ -106,6 +106,12 @@ function initializeGruntConfig(grunt) {
 
     // Unit tests
     qunit: {
+      options: {
+        puppeteer: {
+          executablePath: 'C:\\Users\\preme\\.cache\\puppeteer\\chrome\\win64-148.0.7778.97\\chrome-win64\\chrome.exe',
+          args: ['--no-sandbox', '--disable-setuid-sandbox']
+        }
+      },
       all: ['test/qunit.html']
     },
 

@@ -21,7 +21,7 @@
      * @param {String} name
      */
     registerLoadedModule: function (name) {
-      this.loadedModules[$.trim(name).toLowerCase()] = true;
+      this.loadedModules[(name || '').trim().toLowerCase()] = true;
     },
 
     /**
@@ -29,7 +29,7 @@
      * @return {Boolean}
      */
     hasLoadedModule: function (name) {
-      return $.trim(name).toLowerCase() in this.loadedModules;
+      return (name || '').trim().toLowerCase() in this.loadedModules;
     },
 
     /**
@@ -79,7 +79,7 @@
             appendToElement = document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0];
 
           $.each(moduleList, function (i, modName) {
-            modName = $.trim(modName);
+            modName = (modName || '').trim();
             if (modName.length === 0 || $.formUtils.hasLoadedModule(modName)) {
               moduleLoadedCallback();
             } else {

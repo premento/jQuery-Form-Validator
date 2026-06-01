@@ -27,7 +27,7 @@
       var values = [];
       $.each(val.split(callback ? callback : regex),
         function (i, str) {
-          str = $.trim(str);
+          str = (str || '').trim();
           if (str.length) {
             values.push(str);
           }
@@ -38,7 +38,7 @@
       // exec callback func on each
       $.each(val.split(regex),
         function (i, str) {
-          str = $.trim(str);
+          str = (str || '').trim();
           if (str.length) {
             return callback(str, i);
           }

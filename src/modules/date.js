@@ -63,7 +63,7 @@
 
       $el.trigger('ageCalculated', [age]);
 
-      if (allowedAgeRange.length !== 2 || !$.isNumeric(allowedAgeRange[0]) || !$.isNumeric(allowedAgeRange[1])) {
+      if (allowedAgeRange.length !== 2 || isNaN(parseFloat(allowedAgeRange[0])) || isNaN(parseFloat(allowedAgeRange[1]))) {
         throw new Error('Date range format invalid');
       }
 

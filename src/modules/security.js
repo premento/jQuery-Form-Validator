@@ -360,7 +360,7 @@
         reqParams = {};
       }
       if (typeof reqParams === 'string') {
-        reqParams = $.parseJSON(reqParams);
+        reqParams = JSON.parse(reqParams);
       }
       reqParams[inputName] = val;
 

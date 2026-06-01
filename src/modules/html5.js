@@ -109,9 +109,9 @@
 
             if (suggestions.length === 0) {
               // IE fix
-              var opts = $.trim($('#' + $input.attr('list')).text()).split('\n');
+              var opts = ($('#' + $input.attr('list')).text() || '').trim().split('\n');
               $.each(opts, function (i, option) {
-                suggestions.push($.trim(option));
+                suggestions.push((option || '').trim());
               });
             }
 
@@ -128,7 +128,7 @@
             foundHtml5Rule = true;
 
             var validationRules = ($input.attr('data-validation') || '') + ' ' + validation.join(' ');
-            $input.attr('data-validation', $.trim(validationRules));
+            $input.attr('data-validation', (validationRules || '').trim());
 
             $.each(attrs, function (attrName, attrVal) {
               $input.attr(attrName, attrVal);
@@ -151,7 +151,7 @@
                 }
               })
               .bind('blur', function () {
-                if ($.trim(this.value) === '') {
+                if ((this.value || '').trim() === '') {
                   this.value = this.__defaultValue;
                   $(this).addClass('showing-placeholder');
                 }

@@ -65,7 +65,7 @@
         case 'radio':
           return $form.find('input[name="' + $el.attr('name') + '"]').filter(':checked').length > 0;
         default:
-          return $.trim(val) !== '';
+          return (val || '').trim() !== '';
       }
     },
     errorMessage: '',

@@ -45,7 +45,7 @@
   $.formUtils.addSanitizer({
     name : 'trim',
     sanitizerFunction : function(val) {
-      return $.trim(val);
+      return (val || '').trim();
     }
   });
 
@@ -124,7 +124,7 @@
     sanitizerFunction : function(val, $input) {
       var toRemove = $input.attr('data-sanitize-strip') || '';
       $.split(toRemove, function(char) {
-        var regex = new RegExp($.isNumeric(char) ? char : '\\'+char, 'g');
+        var regex = new RegExp(/^\d+$/.test(char) ? char : '\\'+char, 'g');
         val = val.replace(regex, '');
       });
       return val;

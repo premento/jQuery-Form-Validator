@@ -35,7 +35,7 @@
   // https://github.com/ariya/phantomjs/issues/14014
   // can't use Number.isInteger
   var isInteger = function(value) {
-    return Math.floor(value) === value && $.isNumeric(value);
+    return Math.floor(value) === value && !Array.isArray(value) && (value - parseFloat(value) + 1) >= 0;
   };
 
   /**

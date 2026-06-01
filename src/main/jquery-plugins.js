@@ -406,7 +406,7 @@
     // Run validation callback
     if (typeof conf.onValidate === 'function') {
       var errors = conf.onValidate($form);
-      if ($.isArray(errors)) {
+      if (Array.isArray(errors)) {
         $.each(errors, function (i, err) {
           addErrorMessage(err.message, err.element);
         });

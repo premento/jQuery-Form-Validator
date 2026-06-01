@@ -2,6 +2,24 @@
  */
 (function ($, window, undefined) {
 
+  // Polyfills for jQuery 4.0.0 support to maintain backwards compatibility
+  if (!$.trim) {
+    $.trim = function (val) {
+      return val === null || val === undefined ? '' : String(val).trim();
+    };
+  }
+  if (!$.isArray) {
+    $.isArray = Array.isArray;
+  }
+  if (!$.isNumeric) {
+    $.isNumeric = function (val) {
+      return !Array.isArray(val) && (val - parseFloat(val) + 1) >= 0;
+    };
+  }
+  if (!$.parseJSON) {
+    $.parseJSON = JSON.parse;
+  }
+
   var disableFormSubmit = function () {
       return false;
     },

@@ -491,7 +491,7 @@
         .bind('keyup.suggest', function () {
           var $input = $(this),
             foundSuggestions = [],
-            val = $.trim($input.val()).toLocaleLowerCase();
+            val = ($input.val() || '').trim().toLocaleLowerCase();
 
           if (val === $.formUtils._previousTypedVal) {
             return;
