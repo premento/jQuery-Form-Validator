@@ -102,7 +102,7 @@
                   attrs['data-validation-allowing'] += ',float';
                 }
               } else {
-                attrs['data-validation-allowing'] += ',float,negative';
+                attrs['data-validation-allowing'] = 'float,negative';
               }
               break;
           }

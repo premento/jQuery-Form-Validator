@@ -32,9 +32,9 @@
  */
 (function($, window) {
 
-  $.formUtils.registerLoadedModule('file');
-
   'use strict';
+
+  $.formUtils.registerLoadedModule('file');
 
     var SUPPORTS_FILE_READER = typeof window.FileReader !== 'undefined',
 
@@ -305,10 +305,10 @@
           var file = $input.get(0).files || [],
             thisValidator = this;
           if ($input.attr('data-validation').indexOf('mime') === -1) {
-            alert('You should validate file type being jpg, gif or png on input ' + $input[0].name);
+            $.formUtils.warn('You should validate file type being jpg, gif or png on input ' + $input[0].name);
             done(false);
           } else if (file.length > 1) {
-            alert('Validating image dimensions does not support inputs allowing multiple files');
+            $.formUtils.warn('Validating image dimensions does not support inputs allowing multiple files');
             done(false);
           } else if (file.length === 0) {
             done(true);

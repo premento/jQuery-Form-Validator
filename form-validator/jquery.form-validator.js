@@ -38,7 +38,11 @@
   }
   if (!$.isNumeric) {
     $.isNumeric = function (val) {
-      return !Array.isArray(val) && (val - parseFloat(val) + 1) >= 0;
+      if (Array.isArray(val) || val === true || val === false || val === null || val === undefined) {
+        return false;
+      }
+      var s = String(val).trim();
+      return s.length > 0 && !isNaN(s - parseFloat(s));
     };
   }
   if (!$.parseJSON) {
@@ -48,11 +52,14 @@
   var disableFormSubmit = function () {
       return false;
     },
-    lastFormEvent = null,
     HaltManager = {
-      numHalted: 0,
+      _haltedForms: {},
       haltValidation: function($form) {
-        this.numHalted++;
+        var formId = $form.get(0);
+        if (!this._haltedForms[formId]) {
+          this._haltedForms[formId] = 0;
+        }
+        this._haltedForms[formId]++;
         $.formUtils.haltValidation = true;
         $form
           .unbind('submit', disableFormSubmit)
@@ -62,14 +69,18 @@
             .attr('disabled', 'disabled');
       },
       unHaltValidation: function($form) {
-        this.numHalted--;
-        if (this.numHalted === 0) {
-          $.formUtils.haltValidation = false;
-          $form
-            .unbind('submit', disableFormSubmit)
-            .find('*[type="submit"]')
-              .removeClass('disabled')
-              .removeAttr('disabled', 'disabled');
+        var formId = $form.get(0);
+        if (this._haltedForms[formId]) {
+          this._haltedForms[formId]--;
+          if (this._haltedForms[formId] <= 0) {
+            delete this._haltedForms[formId];
+            $.formUtils.haltValidation = Object.keys(this._haltedForms).length > 0;
+            $form
+              .unbind('submit', disableFormSubmit)
+              .find('*[type="submit"]')
+                .removeClass('disabled')
+                .removeAttr('disabled');
+          }
         }
       }
     };
@@ -77,8 +88,11 @@
   function AsyncValidation($form, $input) {
     this.$form = $form;
     this.$input = $input;
+    this.lastEventContext = null;
+    this._generation = 0;
+    this._boundReset = this.reset.bind(this);
+    $input.on('change paste', this._boundReset);
     this.reset();
-    $input.on('change paste', this.reset.bind(this));
   }
 
   AsyncValidation.prototype.reset = function() {
@@ -86,23 +100,23 @@
     this.hasRun = false;
     this.isRunning = false;
     this.result = undefined;
+    this._generation++;
   };
 
   AsyncValidation.prototype.run = function(eventContext, callback) {
     if (eventContext === 'keyup') {
       return null;
     } else if (this.isRunning) {
-      lastFormEvent = eventContext;
+      this.lastEventContext = eventContext;
       if (!this.haltedFormValidation) {
-        HaltManager.haltValidation();
+        HaltManager.haltValidation(this.$form);
         this.haltedFormValidation = true;
       }
       return null; // Waiting for result
     } else if(this.hasRun) {
-      //this.$input.one('keyup change paste', this.reset.bind(this));
       return this.result;
     } else {
-      lastFormEvent = eventContext;
+      this.lastEventContext = eventContext;
       HaltManager.haltValidation(this.$form);
       this.haltedFormValidation = true;
       this.isRunning = true;
@@ -111,9 +125,22 @@
         .addClass('async-validation');
       this.$form.addClass('async-validation');
 
+      var gen = this._generation;
+      var self = this;
+
+      var timeoutId = setTimeout(function() {
+        if (self.isRunning && self._generation === gen) {
+          self.done(null);
+          $.formUtils.warn('Async validation timed out for ' + self.$input.attr('name'));
+        }
+      }, 30000);
+
       callback(function(result) {
-        this.done(result);
-      }.bind(this));
+        clearTimeout(timeoutId);
+        if (self._generation === gen) {
+          self.done(result);
+        }
+      });
 
       return null;
     }
@@ -128,8 +155,9 @@
       .removeClass('async-validation');
     this.$form.removeClass('async-validation');
     if (this.haltedFormValidation) {
+      this.haltedFormValidation = false;
       HaltManager.unHaltValidation(this.$form);
-      if (lastFormEvent === 'submit') {
+      if (this.lastEventContext === 'submit') {
         this.$form.trigger('submit');
       } else {
         this.$input.trigger('validation.revalidate');
@@ -199,7 +227,7 @@
       var $input = $(this);
       $input.valAttr('async', false);
       $.each($.split($input.attr('data-validation')), function (i, validatorName) {
-        var validator = $.formUtils.validators['validate_'+validatorName];
+        var validator = $.formUtils.validators && $.formUtils.validators['validate_'+validatorName];
         if (validator && validator.async) {
           $input.valAttr('async', 'yes');
         }
@@ -327,6 +355,10 @@
 
   'use strict';
 
+  var sanitizeHTML = function(str) {
+    return $('<div></div>').text(str).html();
+  };
+
   var dialogs = {
 
     resolveErrorMessage: function($elem, validator, validatorName, conf, language) {
@@ -436,7 +468,7 @@
         $messageContainer = false,
         setErrorMessage = function ($elem) {
           $.formUtils.$win.trigger('validationErrorDisplay', [$input, $elem]);
-          $elem.html(errorMsg);
+          $elem.html(sanitizeHTML(errorMsg));
         },
         addErrorToMessageContainer = function() {
           var $found = false;
@@ -505,7 +537,7 @@
           };
 
       $.each(errorMessages, function (i, msg) {
-        viewParams.fields += '<li>'+msg+'</li>';
+        viewParams.fields += '<li>'+sanitizeHTML(msg)+'</li>';
       });
 
       $.each(viewParams, function(param, value) {
@@ -1518,7 +1550,7 @@
       var ignore = $elem.valAttr('ignore');
       if (ignore) {
         $.each(ignore.split(''), function(i, character) {
-          value = value.replace(new RegExp('\\'+character, 'g'), '');
+          value = value.split(character).join('');
         });
       }
 
@@ -1626,7 +1658,7 @@
 
       var findDateUnit = function (unit, formatParts, matches) {
         for (var i = 0; i < formatParts.length; i++) {
-          if (formatParts[i].substring(0, 1) === unit) {
+          if (formatParts[i].substring(0, 1).toLowerCase() === unit) {
             return $.formUtils.parseDateInt(matches[i + 1]);
           }
         }
@@ -1636,6 +1668,10 @@
       month = findDateUnit('m', formatParts, matches);
       day = findDateUnit('d', formatParts, matches);
       year = findDateUnit('y', formatParts, matches);
+
+      if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1) {
+        return false;
+      }
 
       if ((month === 2 && day > 28 && (year % 4 !== 0 || year % 100 === 0 && year % 400 !== 0)) ||
         (month === 2 && day > 29 && (year % 4 === 0 || year % 100 !== 0 && year % 400 === 0)) ||
@@ -1656,10 +1692,8 @@
      * @return {Number}
      */
     parseDateInt: function (val) {
-      if (val.indexOf('0') === 0) {
-        val = val.replace('0', '');
-      }
-      return parseInt(val, 10);
+      var num = parseInt(val, 10);
+      return isNaN(num) ? 0 : num;
     },
 
     /**
@@ -1723,9 +1757,7 @@
      */
     numericRangeCheck: function (value, rangeAllowed) {
       // split by dash
-      var range = $.split(rangeAllowed),
-      // min or max
-        minmax = parseInt(rangeAllowed.substr(3), 10);
+      var range = $.split(rangeAllowed);
 
       if( range.length === 1 && rangeAllowed.indexOf('min') === -1 && rangeAllowed.indexOf('max') === -1 ) {
         range = [rangeAllowed, rangeAllowed]; // only a number, checking agains an exact number of characters
@@ -1735,13 +1767,19 @@
       if (range.length === 2 && (value < parseInt(range[0], 10) || value > parseInt(range[1], 10) )) {
         return [ 'out', range[0], range[1] ];
       } // value is out of range
-      else if (rangeAllowed.indexOf('min') === 0 && (value < minmax )) // min
+      else if (rangeAllowed.indexOf('min') === 0) // min
       {
-        return ['min', minmax];
+        var minmax = parseInt(rangeAllowed.substr(3), 10);
+        if (value < minmax) {
+          return ['min', minmax];
+        }
       } // value is below min
-      else if (rangeAllowed.indexOf('max') === 0 && (value > minmax )) // max
+      else if (rangeAllowed.indexOf('max') === 0) // max
       {
-        return ['max', minmax];
+        var minmax = parseInt(rangeAllowed.substr(3), 10);
+        if (value > minmax) {
+          return ['max', minmax];
+        }
       } // value is above max
       // since no other returns executed, value is in allowed range
       return [ 'ok' ];
@@ -1843,15 +1881,19 @@
 
           // Find the right suggestions
           if (val !== '') {
-            var findPartial = val.length > 2;
+            var findPartial = val.length > 2,
+              escapedVal = val.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             $.each($input.data('suggestions'), function (i, suggestion) {
               var lowerCaseVal = suggestion.toLocaleLowerCase();
               if (lowerCaseVal === val) {
-                foundSuggestions.push('<strong>' + suggestion + '</strong>');
+                foundSuggestions.push(suggestion);
                 hasTypedSuggestion = true;
                 return false;
               } else if (lowerCaseVal.indexOf(val) === 0 || (findPartial && lowerCaseVal.indexOf(val) > -1)) {
-                foundSuggestions.push(suggestion.replace(new RegExp(val, 'gi'), '<strong>$&</strong>'));
+                var highlighted = suggestion.replace(new RegExp(escapedVal, 'gi'), function(match) {
+                  return '___HL___'+match+'___ENDHL___';
+                });
+                foundSuggestions.push(highlighted);
               }
             });
           }
@@ -1877,16 +1919,15 @@
           }
 
           // add suggestions
-          if (foundSuggestions.length > 0 && val.length !== foundSuggestions[0].length) {
+          if (foundSuggestions.length > 0 && val.length !== 0) {
 
             // put container in place every time, just in case
             setSuggsetionPosition($suggestionContainer, $input);
 
-            // Add suggestions HTML to container
+            // Add suggestions to container
             $suggestionContainer.html('');
             $.each(foundSuggestions, function (i, text) {
-              $('<div></div>')
-                .append(text)
+              var $div = $('<div></div>')
                 .css({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -1901,6 +1942,16 @@
                   $input.trigger('change');
                   onSelectSuggestion($input);
                 });
+              // Use text() to avoid XSS, highlight with spans
+              var parts = text.split(/(___HL___.*?___ENDHL___)/g);
+              for (var p = 0; p < parts.length; p++) {
+                if (parts[p].indexOf('___HL___') === 0) {
+                  var content = parts[p].replace('___HL___', '').replace('___ENDHL___', '');
+                  $('<strong></strong>').text(content).appendTo($div);
+                } else if (parts[p] !== '') {
+                  $div.append(document.createTextNode(parts[p]));
+                }
+              }
             });
           }
         })
@@ -1914,11 +1965,14 @@
           if (code === 13 && $.formUtils._selectedSuggestion !== null) {
             suggestionId = $input.valAttr('suggestion-nr');
             $suggestionContainer = $('.jquery-form-suggestion-' + suggestionId);
-            if ($suggestionContainer.length > 0) {
-              var newText = $suggestionContainer.find('div').eq($.formUtils._selectedSuggestion).text();
-              $input.val(newText);
-              $input.trigger('change');
-              onSelectSuggestion($input);
+            if ($suggestionContainer.length > 0 && $.formUtils._selectedSuggestion !== null) {
+              var $suggestions = $suggestionContainer.find('div');
+              if ($.formUtils._selectedSuggestion >= 0 && $.formUtils._selectedSuggestion < $suggestions.length) {
+                var newText = $suggestions.eq($.formUtils._selectedSuggestion).text();
+                $input.val(newText);
+                $input.trigger('change');
+                onSelectSuggestion($input);
+              }
               e.preventDefault();
             }
           }
@@ -2035,6 +2089,9 @@
       badPlNip: 'The NIP entered is invalid',
       badPlRegon: 'The REGON entered is invalid',
       badreCaptcha: 'Please confirm that you are not a bot',
+      badSepa: 'Invalid SEPA account number',
+      badIban: 'Invalid IBAN number',
+      badBic: 'Invalid BIC/SWIFT code',
       passwordComplexityStart: 'Password must contain at least ',
       passwordComplexitySeparator: ', ',
       passwordComplexityUppercaseInfo: ' uppercase letter(s)',
@@ -2058,22 +2115,50 @@
   $.formUtils.addValidator({
     name: 'email',
     validatorFunction: function (email) {
+      // Handle quoted local parts with embedded @
+      var parts = [],
+        currentPart = '',
+        inQuotes = false;
+      for (var i = 0; i < email.length; i++) {
+        var ch = email[i];
+        if (ch === '"') {
+          inQuotes = !inQuotes;
+          currentPart += ch;
+        } else if (ch === '@' && !inQuotes) {
+          parts.push(currentPart);
+          currentPart = '';
+        } else {
+          currentPart += ch;
+        }
+      }
+      parts.push(currentPart);
 
-      var emailParts = email.toLowerCase().split('@'),
-        localPart = emailParts[0],
-        domain = emailParts[1];
+      if (parts.length !== 2) {
+        return false;
+      }
+
+      var localPart = parts[0].toLowerCase(),
+        domain = parts[1].toLowerCase();
 
       if (localPart && domain) {
 
         if( localPart.indexOf('"') === 0 ) {
           var len = localPart.length;
+          if (localPart.lastIndexOf('"') !== len - 1) {
+            return false; // Missing closing quote
+          }
           localPart = localPart.replace(/\"/g, '');
           if( localPart.length !== (len-2) ) {
-            return false; // It was not allowed to have more than two apostrophes
+            // Check for escaped quotes inside
+            var quoteCount = (parts[0].match(/\"/g) || []).length;
+            if (quoteCount !== 2) {
+              return false;
+            }
           }
         }
 
-        return $.formUtils.validators.validate_domain.validatorFunction(emailParts[1]) &&
+        var domainValidator = $.formUtils.validators && $.formUtils.validators.validate_domain;
+        return domainValidator && domainValidator.validatorFunction(domain) &&
           localPart.indexOf('.') !== 0 &&
           localPart.substring(localPart.length-1, localPart.length) !== '.' &&
           localPart.indexOf('..') === -1 &&
@@ -2092,11 +2177,13 @@
   $.formUtils.addValidator({
     name: 'domain',
     validatorFunction: function (val) {
+      var labels = val.split('.');
+      var tld = labels[labels.length - 1];
       return val.length > 0 &&
         val.length <= 253 && // Including sub domains
-        !(/[^a-zA-Z0-9]/.test(val.slice(-2))) && !(/[^a-zA-Z0-9]/.test(val.substr(0, 1))) && !(/[^a-zA-Z0-9\.\-]/.test(val)) &&
+        tld.length >= 2 && !(/[^a-zA-Z0-9]/.test(tld)) && !(/[^a-zA-Z0-9]/.test(val.substr(0, 1))) && !(/[^a-zA-Z0-9\.\-]/.test(val)) &&
         val.split('..').length === 1 &&
-        val.split('.').length > 1;
+        labels.length > 1;
     },
     errorMessage: '',
     errorMessageKey: 'badDomain'
@@ -2114,7 +2201,10 @@
         case 'radio':
           return $form.find('input[name="' + $el.attr('name') + '"]').filter(':checked').length > 0;
         default:
-          return (val || '').trim() !== '';
+          if (typeof val === 'string') {
+            return val.trim() !== '';
+          }
+          return !!val;
       }
     },
     errorMessage: '',
@@ -2138,7 +2228,7 @@
         type = $el.attr('type');
 
       if (lengthAllowed === undefined) {
-        alert('Please add attribute "data-validation-length" to ' + $el[0].nodeName + ' named ' + $el.attr('name'));
+        $.formUtils.warn('Please add attribute "data-validation-length" to ' + $el[0].nodeName + ' named ' + $el.attr('name'));
         return true;
       }
 
@@ -2179,20 +2269,35 @@
   $.formUtils.addValidator({
     name: 'url',
     validatorFunction: function (url) {
-      // written by Scott Gonzalez: http://projects.scottsplayground.com/iri/
-      // - Victor Jonsson added support for arrays in the url ?arg[]=sdfsdf
-      // - General improvements made by Stéphane Moureau <https://github.com/TraderStf>
-
-      var urlFilter = /^(https?|ftp):\/\/((((\w|-|\.|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:)*@)?(((\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5]))|((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])(\w|-|\.|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])(\w|-|\.|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.?)(:\d*)?)(\/(((\w|-|\.|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)+(\/((\w|-|\.|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)*)*)?)?(\?((([a-z]|\d|\[|\]|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|[\uE000-\uF8FF]|\/|\?)*)?(\#(((\w|-|\.|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|\/|\?)*)?$/i;
+      var urlFilter = /^(https?|ftp):\/\/((((\w|-|\.|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:)*@)?(((\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5]))|\[([^\]]+)\]|((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])(\w|-|\.|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])(\w|-|\.|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.?)(:\d*)?)(\/(((\w|-|\.|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)+(\/((\w|-|\.|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)*)*)?)?(\?((([a-z]|\d|\[|\]|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|[\uE000-\uF8FF]|\/|\?)*)?(\#(((\w|-|\.|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|\/|\?)*)?$/i;
       if (urlFilter.test(url)) {
-        var domain = url.split('://')[1],
-          domainSlashPos = domain.indexOf('/');
-
-        if (domainSlashPos > -1) {
-          domain = domain.substr(0, domainSlashPos);
+        var afterProtocol = url.split('://')[1],
+          // Strip userinfo if present
+          atPos = afterProtocol.indexOf('@');
+        if (atPos > -1) {
+          afterProtocol = afterProtocol.substring(atPos + 1);
         }
-
-        return $.formUtils.validators.validate_domain.validatorFunction(domain); // todo: add support for IP-addresses
+        // Strip port if present
+        var hostEnd = afterProtocol.indexOf('/');
+        if (hostEnd === -1) {
+          hostEnd = afterProtocol.indexOf('?');
+        }
+        if (hostEnd === -1) {
+          hostEnd = afterProtocol.indexOf('#');
+        }
+        var host = hostEnd > -1 ? afterProtocol.substr(0, hostEnd) : afterProtocol;
+        // Strip port
+        var colonPos = host.lastIndexOf(':');
+        if (colonPos > -1 && host.indexOf(']') === -1) {
+          host = host.substring(0, colonPos);
+        }
+        // Strip IPv6 brackets
+        if (host.indexOf('[') === 0 && host.lastIndexOf(']') > 0) {
+          host = host.substring(1, host.lastIndexOf(']'));
+          return host.split(':').length >= 2; // simple IPv6 check
+        }
+        var domainValidator = $.formUtils.validators && $.formUtils.validators.validate_domain;
+        return domainValidator && domainValidator.validatorFunction(host);
       }
       return false;
     },
@@ -2221,7 +2326,6 @@
             throw new ReferenceError('The data-sanitize value numberFormat cannot be used without the numeral' +
               ' library. Please see Data Validation in http://www.formvalidator.net for more information.');
           }
-          //Unformat input first, then convert back to String
           if (val.length) {
             val = String(numeral().unformat(val));
           }
@@ -2236,8 +2340,17 @@
         }
 
         if (allowing.indexOf('range') > -1) {
-          begin = parseFloat(allowing.substring(allowing.indexOf('[') + 1, allowing.indexOf(';')));
-          end = parseFloat(allowing.substring(allowing.indexOf(';') + 1, allowing.indexOf(']')));
+          var rangeStart = allowing.indexOf('['),
+            rangeSep = allowing.indexOf(';'),
+            rangeEnd = allowing.indexOf(']');
+          if (rangeStart === -1 || rangeSep === -1 || rangeEnd === -1 || rangeSep <= rangeStart || rangeEnd <= rangeSep) {
+            return false;
+          }
+          begin = parseFloat(allowing.substring(rangeStart + 1, rangeSep));
+          end = parseFloat(allowing.substring(rangeSep + 1, rangeEnd));
+          if (isNaN(begin) || isNaN(end)) {
+            return false;
+          }
           allowsRange = true;
         }
 
@@ -2247,16 +2360,39 @@
 
         if (decimalSeparator === ',') {
           if (val.indexOf('.') > -1) {
-            return false;
+            val = val.replace(/\./g, '');
           }
-          // Fix for checking range with floats using ,
           val = val.replace(',', '.');
         }
-        if (val.replace(/[0-9-]/g, '') === '' && (!allowsRange || (val >= begin && val <= end)) && (!allowsSteps || (val % steps === 0))) {
-          return true;
-        }
 
-        if (allowing.indexOf('float') > -1 && val.match(new RegExp('^([0-9-]+)\\.([0-9]+)$')) !== null && (!allowsRange || (val >= begin && val <= end)) && (!allowsSteps || (val % steps === 0))) {
+        var isInt = function(v) {
+          if (v === '-' || v === '') {
+            return false;
+          }
+          return v.replace(/[0-9-]/g, '') === '';
+        };
+
+        var isFloat = function(v) {
+          if (v === '-' || v === '' || v === '.' || v === '-.') {
+            return false;
+          }
+          return /^-?[0-9]+\.[0-9]+$/.test(v);
+        };
+
+        var inRange = function(v) {
+          return !allowsRange || (parseFloat(v) >= begin && parseFloat(v) <= end);
+        };
+
+        var stepCheck = function(v) {
+          if (!allowsSteps) {
+            return true;
+          }
+          var num = parseFloat(v);
+          var step = parseFloat(steps);
+          return Math.abs(num % step) < 1e-10 || Math.abs(num % step - step) < 1e-10;
+        };
+
+        if ((isInt(val) || (allowing.indexOf('float') > -1 && isFloat(val))) && inRange(val) && stepCheck(val)) {
           return true;
         }
       }
@@ -2279,7 +2415,7 @@
         hasSpaces = false;
 
       if (additionalChars) {
-        pattern = patternStart + additionalChars + patternEnd;
+        pattern = patternStart + additionalChars.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + patternEnd;
         var extra = additionalChars.replace(/\\/g, '');
         if (extra.indexOf(' ') > -1) {
           hasSpaces = true;
@@ -2313,7 +2449,12 @@
   $.formUtils.addValidator({
     name: 'custom',
     validatorFunction: function (val, $el) {
-      var regexp = new RegExp($el.valAttr('regexp'));
+      var pattern = $el.valAttr('regexp');
+      if (!pattern) {
+        $.formUtils.warn('Attribute "data-validation-regexp" is empty for ' + $el[0].nodeName + ' named ' + $el.attr('name'));
+        return true;
+      }
+      var regexp = new RegExp(pattern);
       return regexp.test(val);
     },
     errorMessage: '',
@@ -2358,7 +2499,8 @@
 
       if (qtyAllowed === undefined) {
         var elementType = $el.get(0).nodeName;
-        alert('Attribute "data-validation-qty" is missing from ' + elementType + ' named ' + $el.attr('name'));
+        $.formUtils.warn('Attribute "data-validation-qty" is missing from ' + elementType + ' named ' + $el.attr('name'));
+        return true;
       }
 
       // call Utility function to check if count is above min, below max, within range etc.
