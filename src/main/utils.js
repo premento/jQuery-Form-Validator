@@ -183,7 +183,7 @@
       var ignore = $elem.valAttr('ignore');
       if (ignore) {
         $.each(ignore.split(''), function(i, character) {
-          value = value.replace(new RegExp('\\'+character, 'g'), '');
+          value = value.split(character).join('');
         });
       }
 
@@ -291,7 +291,7 @@
 
       var findDateUnit = function (unit, formatParts, matches) {
         for (var i = 0; i < formatParts.length; i++) {
-          if (formatParts[i].substring(0, 1) === unit) {
+          if (formatParts[i].substring(0, 1).toLowerCase() === unit) {
             return $.formUtils.parseDateInt(matches[i + 1]);
           }
         }
@@ -301,6 +301,10 @@
       month = findDateUnit('m', formatParts, matches);
       day = findDateUnit('d', formatParts, matches);
       year = findDateUnit('y', formatParts, matches);
+
+      if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1) {
+        return false;
+      }
 
       if ((month === 2 && day > 28 && (year % 4 !== 0 || year % 100 === 0 && year % 400 !== 0)) ||
         (month === 2 && day > 29 && (year % 4 === 0 || year % 100 !== 0 && year % 400 === 0)) ||
@@ -321,10 +325,8 @@
      * @return {Number}
      */
     parseDateInt: function (val) {
-      if (val.indexOf('0') === 0) {
-        val = val.slice(1);
-      }
-      return parseInt(val, 10);
+      var num = parseInt(val, 10);
+      return isNaN(num) ? 0 : num;
     },
 
     /**
@@ -388,9 +390,7 @@
      */
     numericRangeCheck: function (value, rangeAllowed) {
       // split by dash
-      var range = $.split(rangeAllowed),
-      // min or max
-        minmax = parseInt(rangeAllowed.substr(3), 10);
+      var range = $.split(rangeAllowed);
 
       if( range.length === 1 && rangeAllowed.indexOf('min') === -1 && rangeAllowed.indexOf('max') === -1 ) {
         range = [rangeAllowed, rangeAllowed]; // only a number, checking agains an exact number of characters
@@ -400,13 +400,19 @@
       if (range.length === 2 && (value < parseInt(range[0], 10) || value > parseInt(range[1], 10) )) {
         return [ 'out', range[0], range[1] ];
       } // value is out of range
-      else if (rangeAllowed.indexOf('min') === 0 && (value < minmax )) // min
+      else if (rangeAllowed.indexOf('min') === 0) // min
       {
-        return ['min', minmax];
+        var minmax = parseInt(rangeAllowed.substr(3), 10);
+        if (value < minmax) {
+          return ['min', minmax];
+        }
       } // value is below min
-      else if (rangeAllowed.indexOf('max') === 0 && (value > minmax )) // max
+      else if (rangeAllowed.indexOf('max') === 0) // max
       {
-        return ['max', minmax];
+        var minmax = parseInt(rangeAllowed.substr(3), 10);
+        if (value > minmax) {
+          return ['max', minmax];
+        }
       } // value is above max
       // since no other returns executed, value is in allowed range
       return [ 'ok' ];
@@ -508,15 +514,19 @@
 
           // Find the right suggestions
           if (val !== '') {
-            var findPartial = val.length > 2;
+            var findPartial = val.length > 2,
+              escapedVal = val.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             $.each($input.data('suggestions'), function (i, suggestion) {
               var lowerCaseVal = suggestion.toLocaleLowerCase();
               if (lowerCaseVal === val) {
-                foundSuggestions.push('<strong>' + suggestion + '</strong>');
+                foundSuggestions.push(suggestion);
                 hasTypedSuggestion = true;
                 return false;
               } else if (lowerCaseVal.indexOf(val) === 0 || (findPartial && lowerCaseVal.indexOf(val) > -1)) {
-                foundSuggestions.push(suggestion.replace(new RegExp(val, 'gi'), '<strong>$&</strong>'));
+                var highlighted = suggestion.replace(new RegExp(escapedVal, 'gi'), function(match) {
+                  return '___HL___'+match+'___ENDHL___';
+                });
+                foundSuggestions.push(highlighted);
               }
             });
           }
@@ -542,16 +552,15 @@
           }
 
           // add suggestions
-          if (foundSuggestions.length > 0 && val.length !== foundSuggestions[0].length) {
+          if (foundSuggestions.length > 0 && val.length !== 0) {
 
             // put container in place every time, just in case
             setSuggsetionPosition($suggestionContainer, $input);
 
-            // Add suggestions HTML to container
+            // Add suggestions to container
             $suggestionContainer.html('');
             $.each(foundSuggestions, function (i, text) {
-              $('<div></div>')
-                .append(text)
+              var $div = $('<div></div>')
                 .css({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -566,6 +575,16 @@
                   $input.trigger('change');
                   onSelectSuggestion($input);
                 });
+              // Use text() to avoid XSS, highlight with spans
+              var parts = text.split(/(___HL___.*?___ENDHL___)/g);
+              for (var p = 0; p < parts.length; p++) {
+                if (parts[p].indexOf('___HL___') === 0) {
+                  var content = parts[p].replace('___HL___', '').replace('___ENDHL___', '');
+                  $('<strong></strong>').text(content).appendTo($div);
+                } else if (parts[p] !== '') {
+                  $div.append(document.createTextNode(parts[p]));
+                }
+              }
             });
           }
         })
@@ -579,11 +598,14 @@
           if (code === 13 && $.formUtils._selectedSuggestion !== null) {
             suggestionId = $input.valAttr('suggestion-nr');
             $suggestionContainer = $('.jquery-form-suggestion-' + suggestionId);
-            if ($suggestionContainer.length > 0) {
-              var newText = $suggestionContainer.find('div').eq($.formUtils._selectedSuggestion).text();
-              $input.val(newText);
-              $input.trigger('change');
-              onSelectSuggestion($input);
+            if ($suggestionContainer.length > 0 && $.formUtils._selectedSuggestion !== null) {
+              var $suggestions = $suggestionContainer.find('div');
+              if ($.formUtils._selectedSuggestion >= 0 && $.formUtils._selectedSuggestion < $suggestions.length) {
+                var newText = $suggestions.eq($.formUtils._selectedSuggestion).text();
+                $input.val(newText);
+                $input.trigger('change');
+                onSelectSuggestion($input);
+              }
               e.preventDefault();
             }
           }

@@ -5,6 +5,10 @@
 
   'use strict';
 
+  var sanitizeHTML = function(str) {
+    return $('<div></div>').text(str).html();
+  };
+
   var dialogs = {
 
     resolveErrorMessage: function($elem, validator, validatorName, conf, language) {
@@ -114,7 +118,7 @@
         $messageContainer = false,
         setErrorMessage = function ($elem) {
           $.formUtils.$win.trigger('validationErrorDisplay', [$input, $elem]);
-          $elem.html(errorMsg);
+          $elem.html(sanitizeHTML(errorMsg));
         },
         addErrorToMessageContainer = function() {
           var $found = false;
@@ -183,7 +187,7 @@
           };
 
       $.each(errorMessages, function (i, msg) {
-        viewParams.fields += '<li>'+msg+'</li>';
+        viewParams.fields += '<li>'+sanitizeHTML(msg)+'</li>';
       });
 
       $.each(viewParams, function(param, value) {

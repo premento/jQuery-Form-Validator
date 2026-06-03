@@ -79,9 +79,8 @@
       'mastercard': [16, 16],
       'maestro': [12, 19],
       'discover': [16, 16]
-    },
-    checkOnlyAmex = false,
-    allowsAmex = false;
+    };
+
 
   /*
    * Credit card
@@ -89,11 +88,13 @@
   $.formUtils.addValidator({
     name: 'creditcard',
     validatorFunction: function (value, $el) {
-      var allowing = $.split($el.valAttr('allowing') || '');
+      var allowing = $.split($el.valAttr('allowing') || ''),
+        allowsAmex = $.inArray('amex', allowing) > -1,
+        checkOnlyAmex = allowsAmex && allowing.length === 1;
 
-      // Setup for cvv validation
-      allowsAmex = $.inArray('amex', allowing) > -1;
-      checkOnlyAmex = allowsAmex && allowing.length === 1;
+      // Store for cvv validator
+      $el.data('checkOnlyAmex', checkOnlyAmex);
+      $el.data('allowsAmex', allowsAmex);
 
       // Correct length
       if (allowing.length > 0) {
@@ -110,6 +111,11 @@
         });
 
         if (!hasValidLength) {
+          return false;
+        }
+      } else {
+        // When no allowing is specified, validate against common card lengths (13-19 digits)
+        if (value.length < 13 || value.length > 19) {
           return false;
         }
       }
@@ -146,9 +152,11 @@
    */
   $.formUtils.addValidator({
     name: 'cvv',
-    validatorFunction: function (val) {
+    validatorFunction: function (val, $el) {
       if (val.replace(/[0-9]/g, '') === '') {
         val = val + '';
+        var checkOnlyAmex = $el.data('checkOnlyAmex') || false,
+          allowsAmex = $el.data('allowsAmex') || false;
         if (checkOnlyAmex) {
           return val.length === 4;
         } else if (allowsAmex) {
@@ -360,7 +368,11 @@
         reqParams = {};
       }
       if (typeof reqParams === 'string') {
-        reqParams = JSON.parse(reqParams);
+        try {
+          reqParams = JSON.parse(reqParams);
+        } catch(e) {
+          reqParams = {};
+        }
       }
       reqParams[inputName] = val;
 
@@ -368,6 +380,7 @@
         url: serverURL,
         type: 'POST',
         cache: false,
+        timeout: 30000,
         data: reqParams,
         dataType: 'json',
         error: function (error) {
@@ -386,7 +399,12 @@
   $.formUtils.addAsyncValidator({
     name: 'server',
     validatorFunction: function (done, val, $input, conf, lang, $form) {
-      var serverURL = $input.valAttr('url') || conf.backendUrl || document.location.href;
+      var serverURL = $input.valAttr('url') || conf.backendUrl || '';
+      if (!serverURL) {
+        $.formUtils.warn('Server validator: no URL configured. Use data-validation-url or conf.backendUrl');
+        done(false);
+        return;
+      }
       // @todo: deprecated class names that should be removed when moving up to 3.0
       $form.addClass('validating-server-side');
       $input.addClass('validating-server-side');
@@ -394,7 +412,7 @@
         $form.removeClass('validating-server-side');
         $input.removeClass('validating-server-side');
         if (response.message) {
-          $input.attr(conf.validationErrorMsgAttribute, response.message);
+          $input.attr(conf.validationErrorMsgAttribute, $('<div></div>').text(response.message).html());
         }
         done(response.valid);
       });
@@ -417,7 +435,7 @@
         pattern = '';
 
       if (additionalChars) {
-        pattern = patternStart + additionalChars + patternEnd;
+        pattern = patternStart + additionalChars.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + patternEnd;
         var extra = additionalChars.replace(/\\/g, '');
         if (extra.indexOf(' ') > -1) {
           extra = extra.replace(' ', '');
@@ -484,6 +502,9 @@
       $.each(subValidators, function(name, subValidator) {
         var numRequired = parseInt(subValidator.numRequired, 10);
         if (numRequired) {
+          if (isNaN(numRequired) || numRequired < 0) {
+            return;
+          }
           var regexp = new RegExp(subValidator.pattern),
             valid = false;
 
@@ -541,7 +562,7 @@
     } else if (!$.formUtils.hasLoadedGrecaptcha && $('[data-validation~="recaptcha"]', $forms).length) {
       $.formUtils.hasLoadedGrecaptcha = true;
 
-      var src = '//www.google.com/recaptcha/api.js?onload=reCaptchaLoaded&render=explicit' + (config.lang ? '&hl=' + config.lang : '');
+      var src = '//www.google.com/recaptcha/api.js?onload=reCaptchaLoaded&render=explicit' + (config && config.lang ? '&hl=' + config.lang : '');
       var script = document.createElement('script');
       script.type = 'text/javascript';
       script.async = true;

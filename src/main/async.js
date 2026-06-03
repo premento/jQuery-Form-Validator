@@ -13,7 +13,11 @@
   }
   if (!$.isNumeric) {
     $.isNumeric = function (val) {
-      return !Array.isArray(val) && (val - parseFloat(val) + 1) >= 0;
+      if (Array.isArray(val) || val === true || val === false || val === null || val === undefined) {
+        return false;
+      }
+      var s = String(val).trim();
+      return s.length > 0 && !isNaN(s - parseFloat(s));
     };
   }
   if (!$.parseJSON) {
@@ -23,11 +27,14 @@
   var disableFormSubmit = function () {
       return false;
     },
-    lastFormEvent = null,
     HaltManager = {
-      numHalted: 0,
+      _haltedForms: {},
       haltValidation: function($form) {
-        this.numHalted++;
+        var formId = $form.get(0);
+        if (!this._haltedForms[formId]) {
+          this._haltedForms[formId] = 0;
+        }
+        this._haltedForms[formId]++;
         $.formUtils.haltValidation = true;
         $form
           .unbind('submit', disableFormSubmit)
@@ -37,14 +44,18 @@
             .attr('disabled', 'disabled');
       },
       unHaltValidation: function($form) {
-        this.numHalted--;
-        if (this.numHalted === 0) {
-          $.formUtils.haltValidation = false;
-          $form
-            .unbind('submit', disableFormSubmit)
-            .find('*[type="submit"]')
-              .removeClass('disabled')
-              .removeAttr('disabled');
+        var formId = $form.get(0);
+        if (this._haltedForms[formId]) {
+          this._haltedForms[formId]--;
+          if (this._haltedForms[formId] <= 0) {
+            delete this._haltedForms[formId];
+            $.formUtils.haltValidation = Object.keys(this._haltedForms).length > 0;
+            $form
+              .unbind('submit', disableFormSubmit)
+              .find('*[type="submit"]')
+                .removeClass('disabled')
+                .removeAttr('disabled');
+          }
         }
       }
     };
@@ -52,8 +63,11 @@
   function AsyncValidation($form, $input) {
     this.$form = $form;
     this.$input = $input;
+    this.lastEventContext = null;
+    this._generation = 0;
+    this._boundReset = this.reset.bind(this);
+    $input.on('change paste', this._boundReset);
     this.reset();
-    $input.on('change paste', this.reset.bind(this));
   }
 
   AsyncValidation.prototype.reset = function() {
@@ -61,23 +75,23 @@
     this.hasRun = false;
     this.isRunning = false;
     this.result = undefined;
+    this._generation++;
   };
 
   AsyncValidation.prototype.run = function(eventContext, callback) {
     if (eventContext === 'keyup') {
       return null;
     } else if (this.isRunning) {
-      lastFormEvent = eventContext;
+      this.lastEventContext = eventContext;
       if (!this.haltedFormValidation) {
         HaltManager.haltValidation(this.$form);
         this.haltedFormValidation = true;
       }
       return null; // Waiting for result
     } else if(this.hasRun) {
-      //this.$input.one('keyup change paste', this.reset.bind(this));
       return this.result;
     } else {
-      lastFormEvent = eventContext;
+      this.lastEventContext = eventContext;
       HaltManager.haltValidation(this.$form);
       this.haltedFormValidation = true;
       this.isRunning = true;
@@ -86,9 +100,22 @@
         .addClass('async-validation');
       this.$form.addClass('async-validation');
 
+      var gen = this._generation;
+      var self = this;
+
+      var timeoutId = setTimeout(function() {
+        if (self.isRunning && self._generation === gen) {
+          self.done(null);
+          $.formUtils.warn('Async validation timed out for ' + self.$input.attr('name'));
+        }
+      }, 30000);
+
       callback(function(result) {
-        this.done(result);
-      }.bind(this));
+        clearTimeout(timeoutId);
+        if (self._generation === gen) {
+          self.done(result);
+        }
+      });
 
       return null;
     }
@@ -103,8 +130,9 @@
       .removeClass('async-validation');
     this.$form.removeClass('async-validation');
     if (this.haltedFormValidation) {
+      this.haltedFormValidation = false;
       HaltManager.unHaltValidation(this.$form);
-      if (lastFormEvent === 'submit') {
+      if (this.lastEventContext === 'submit') {
         this.$form.trigger('submit');
       } else {
         this.$input.trigger('validation.revalidate');
@@ -174,7 +202,7 @@
       var $input = $(this);
       $input.valAttr('async', false);
       $.each($.split($input.attr('data-validation')), function (i, validatorName) {
-        var validator = $.formUtils.validators['validate_'+validatorName];
+        var validator = $.formUtils.validators && $.formUtils.validators['validate_'+validatorName];
         if (validator && validator.async) {
           $input.valAttr('async', 'yes');
         }

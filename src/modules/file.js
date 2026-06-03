@@ -15,9 +15,9 @@
  */
 (function($, window) {
 
-  $.formUtils.registerLoadedModule('file');
-
   'use strict';
+
+  $.formUtils.registerLoadedModule('file');
 
     var SUPPORTS_FILE_READER = typeof window.FileReader !== 'undefined',
 
