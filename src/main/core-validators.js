@@ -89,7 +89,7 @@
         type = $el.attr('type');
 
       if (lengthAllowed === undefined) {
-        alert('Please add attribute "data-validation-length" to ' + $el[0].nodeName + ' named ' + $el.attr('name'));
+        $.formUtils.warn('Please add attribute "data-validation-length" to ' + $el[0].nodeName + ' named ' + $el.attr('name'));
         return true;
       }
 
@@ -309,7 +309,7 @@
 
       if (qtyAllowed === undefined) {
         var elementType = $el.get(0).nodeName;
-        alert('Attribute "data-validation-qty" is missing from ' + elementType + ' named ' + $el.attr('name'));
+        $.formUtils.warn('Attribute "data-validation-qty" is missing from ' + elementType + ' named ' + $el.attr('name'));
       }
 
       // call Utility function to check if count is above min, below max, within range etc.

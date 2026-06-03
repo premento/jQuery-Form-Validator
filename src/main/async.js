@@ -44,7 +44,7 @@
             .unbind('submit', disableFormSubmit)
             .find('*[type="submit"]')
               .removeClass('disabled')
-              .removeAttr('disabled', 'disabled');
+              .removeAttr('disabled');
         }
       }
     };
@@ -69,7 +69,7 @@
     } else if (this.isRunning) {
       lastFormEvent = eventContext;
       if (!this.haltedFormValidation) {
-        HaltManager.haltValidation();
+        HaltManager.haltValidation(this.$form);
         this.haltedFormValidation = true;
       }
       return null; // Waiting for result

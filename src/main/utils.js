@@ -322,7 +322,7 @@
      */
     parseDateInt: function (val) {
       if (val.indexOf('0') === 0) {
-        val = val.replace('0', '');
+        val = val.slice(1);
       }
       return parseInt(val, 10);
     },
@@ -700,6 +700,9 @@
       badPlNip: 'The NIP entered is invalid',
       badPlRegon: 'The REGON entered is invalid',
       badreCaptcha: 'Please confirm that you are not a bot',
+      badSepa: 'Invalid SEPA account number',
+      badIban: 'Invalid IBAN number',
+      badBic: 'Invalid BIC/SWIFT code',
       passwordComplexityStart: 'Password must contain at least ',
       passwordComplexitySeparator: ', ',
       passwordComplexityUppercaseInfo: ' uppercase letter(s)',

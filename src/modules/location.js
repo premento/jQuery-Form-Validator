@@ -68,7 +68,7 @@
 
   $.fn.suggestCountry = function (settings) {
     var countries = _makeSortedList($.formUtils.validators.validate_country.countries),
-      usaIndex = $.inArray(countries, 'Usa');
+      usaIndex = $.inArray('Usa', countries);
 
     countries[usaIndex] = 'USA';
     return $.formUtils.suggest(this, countries, settings);

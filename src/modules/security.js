@@ -558,7 +558,7 @@
 
     $forms.each(function () {
       var $form = $(this),
-        config = $form.get(0).validationConfig || $form.context.validationConfig || false;
+        config = $form.get(0).validationConfig || false;
 
       if (config) {
         $('[data-validation~="recaptcha"]', $form).each(function () {
