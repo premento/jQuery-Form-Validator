@@ -43,6 +43,18 @@
       badDate: 'Niepoprawna data',
       lengthBadStart: 'Wprowadzona wartość musi być pomiędzy ',
       lengthBadEnd: ' znaków',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'Wprowadzona wartość musi być pomiędzy {0} znaków',
+      lengthTooShort: 'Wprowadzona wartość jest mniejsza niż {0} znaków',
+      lengthTooLong: 'Wprowadzona wartość jest większa niż {0} znaków',
+      groupCheckedRange: 'Proszę wybrać pomiędzy {0} element(ów)',
+      groupCheckedTooFew: 'Proszę wybrać przynajmniej {0} element(ów)',
+      groupCheckedTooMany: 'Proszę wybrać maksymalnie {0} element(ów)',
+      badNumberOfSelectedOptions: 'Musisz wybrać przynajmniej {0} odpowiedzi',
       lengthTooLongStart: 'Wprowadzona wartość jest większa niż ',
       lengthTooShortStart: 'Wprowadzona wartość jest mniejsza niż ',
       notConfirmed: 'Wprowadzone wartości nie zostały potwierdzone',

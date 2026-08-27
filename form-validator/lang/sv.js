@@ -43,6 +43,18 @@
       badDate: 'Du har anget ett felaktigt datum',
       lengthBadStart: 'Ditt svar måste innehålla mellan ',
       lengthBadEnd: ' tecken',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'Ditt svar måste innehålla mellan {0} tecken',
+      lengthTooShort: 'Du har angett ett svar som är kortare än {0} tecken',
+      lengthTooLong: 'Du har angett ett svar som är längre än {0} tecken',
+      groupCheckedRange: 'Välj mellan {0} val',
+      groupCheckedTooFew: 'Då måste göra minst {0} val',
+      groupCheckedTooMany: 'Du får inte göra fler än {0} val',
+      badNumberOfSelectedOptions: 'Du måste åtminstone välja {0} svarsalternativ',
       lengthTooLongStart: 'Du har angett ett svar som är längre än ',
       lengthTooShortStart: 'Du har angett ett svar som är kortare än ',
       notConfirmed: 'Svaren kunde inte bekräfta varandra',

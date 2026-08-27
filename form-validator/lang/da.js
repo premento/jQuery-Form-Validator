@@ -62,6 +62,18 @@
           imageTooTall: 'Billedet må ikke være højere end',
           imageTooWide: 'Billedet må ikke være bredere end',
           lengthBadEnd: ' tegn',
+
+          // 3.0 templates, composed from the fragments above so the rendered
+          // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+          // forms may be added as {one: ..., other: ...} where this language
+          // needs them.
+          lengthBadRange: 'Feltets værdi skal være mellem {0} tegn',
+          lengthTooShort: 'Feltets værdi må ikke være kortere end {0} tegn',
+          lengthTooLong: 'Feltets værdi må ikke være længere end {0} tegn',
+          groupCheckedRange: 'Vælg venligst mellem {0} ting',
+          groupCheckedTooFew: 'Vælg mindst {0} ting',
+          groupCheckedTooMany: 'Vælg højst {0} ting',
+          badNumberOfSelectedOptions: 'Du skal vælge mindst {0} svar',
           lengthBadStart: 'Feltets værdi skal være mellem ',
           lengthTooLongStart: 'Feltets værdi må ikke være længere end ',
           lengthTooShortStart: 'Feltets værdi må ikke være kortere end ',

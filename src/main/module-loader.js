@@ -18,10 +18,23 @@
     loadedModules: {},
 
     /**
+     * Module names reach us in several shapes -- "security", "security.js",
+     * "lang/sv.js" -- so normalise before comparing. The ".dev" suffix is
+     * deliberately left intact: it exists to bypass the cache, and collapsing
+     * it onto the plain name would defeat that.
+     *
+     * @param {String} name
+     * @return {String}
+     */
+    normalizeModuleName: function (name) {
+      return (name || '').trim().toLowerCase().replace(/\.js$/, '');
+    },
+
+    /**
      * @param {String} name
      */
     registerLoadedModule: function (name) {
-      this.loadedModules[(name || '').trim().toLowerCase()] = true;
+      this.loadedModules[this.normalizeModuleName(name)] = true;
     },
 
     /**
@@ -29,7 +42,7 @@
      * @return {Boolean}
      */
     hasLoadedModule: function (name) {
-      return (name || '').trim().toLowerCase() in this.loadedModules;
+      return this.normalizeModuleName(name) in this.loadedModules;
     },
 
     /**
@@ -54,6 +67,27 @@
         setTimeout(function () {
           $.formUtils.loadModules(modules, path, callback);
         }, 100);
+        return;
+      }
+
+      // Everything already registered -- which is the normal case when the page
+      // imports the modules directly rather than naming them in the modules
+      // option. There is nothing to fetch, and no reason to go hunting for a
+      // script path that an ES module page does not have. Without this the
+      // callback is deferred to document ready, which delays validatorsLoaded
+      // and with it anything that listens for it, such as the language files.
+      var everythingLoaded = true;
+      $.each($.split(modules), function (i, modName) {
+        if (modName.length && !$.formUtils.hasLoadedModule(modName)) {
+          everythingLoaded = false;
+          return false;
+        }
+      });
+
+      if (everythingLoaded) {
+        if (typeof callback === 'function') {
+          callback();
+        }
         return;
       }
 
@@ -94,17 +128,15 @@
                 script.onload = moduleLoadedCallback;
                 script.src = scriptUrl + ( scriptUrl.slice(-7) === '.dev.js' ? cacheSuffix : '' );
                 script.onerror = function() {
-                  $.formUtils.warn('Unable to load form validation module '+scriptUrl, true);
+                  $.formUtils.warn(
+                    'Unable to load form validation module ' + scriptUrl + '. ' +
+                    'If this page is built with a bundler or served under a strict ' +
+                    'Content-Security-Policy, import the module instead of naming it ' +
+                    'in the modules option: import \'jquery-form-validator/modules/' +
+                    modName + '\';',
+                    true
+                  );
                   moduleLoadedCallback();
-                };
-                script.onreadystatechange = function () {
-                  // IE 7 fix
-                  if (this.readyState === 'complete' || this.readyState === 'loaded') {
-                    moduleLoadedCallback();
-                    // Handle memory leak in IE
-                    this.onload = null;
-                    this.onreadystatechange = null;
-                  }
                 };
                 appendToElement.appendChild(script);
               }

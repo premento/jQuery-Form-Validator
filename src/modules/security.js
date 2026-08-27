@@ -21,6 +21,129 @@
 
   $.formUtils.registerLoadedModule('security');
 
+  /**
+   * SHA-1 of a string, uppercase hex.
+   *
+   * SHA-1 is not a security choice here -- it is the digest the Have I Been
+   * Pwned range API is keyed on.
+   *
+   * @param {String} value
+   * @return {Promise}
+   */
+  var sha1Hex = function (value) {
+      var bytes = new window.TextEncoder().encode(value);
+      return window.crypto.subtle.digest('SHA-1', bytes).then(function (buffer) {
+        var view = new window.Uint8Array(buffer),
+          out = [],
+          i;
+        for (i = 0; i < view.length; i++) {
+          out.push(('0' + view[i].toString(16)).slice(-2));
+        }
+        return out.join('').toUpperCase();
+      });
+    },
+
+    canScreenPasswords = function () {
+      // crypto.subtle is only exposed in a secure context.
+      return !!(window.crypto && window.crypto.subtle &&
+        window.TextEncoder && window.fetch);
+    };
+
+  /**
+   * Reject passwords known to have appeared in a breach.
+   *
+   * OPT IN, and it talks to the network. Add data-validation="breached" to a
+   * field and every check sends an HTTPS request to the Have I Been Pwned
+   * range API.
+   *
+   * The password itself never leaves the browser. Only the first five hex
+   * characters of its SHA-1 are sent; the service answers with every suffix
+   * sharing that prefix, and the match is made locally. This is the
+   * k-anonymity model the API is designed around.
+   *
+   * Point data-validation-breach-url elsewhere to use your own endpoint.
+   */
+  $.formUtils.addAsyncValidator({
+    name: 'breached',
+    validatorFunction: function (done, val, $el) {
+      var endpoint = $el.valAttr('breach-url') || 'https://api.pwnedpasswords.com/range/';
+
+      if (!val) {
+        done(true);
+        return;
+      }
+
+      if (!canScreenPasswords()) {
+        $.formUtils.warn(
+          'Breached password screening needs crypto.subtle and fetch, which are ' +
+          'only available in a secure context (https, or localhost). Skipping ' +
+          'the check.'
+        );
+        done(true);
+        return;
+      }
+
+      sha1Hex(val)
+        .then(function (hash) {
+          var prefix = hash.substring(0, 5),
+            suffix = hash.substring(5);
+
+          return window.fetch(endpoint + prefix, {
+            method: 'GET',
+            // Nothing about this request identifies the user; keep it that way.
+            credentials: 'omit',
+            cache: 'no-store'
+          }).then(function (response) {
+            if (!response.ok) {
+              throw new Error('Breach lookup returned ' + response.status);
+            }
+            return response.text();
+          }).then(function (body) {
+            var breached = false;
+            $.each(body.split('\n'), function (i, line) {
+              if (line.split(':')[0].trim().toUpperCase() === suffix) {
+                breached = true;
+                return false;
+              }
+            });
+            done(!breached);
+          });
+        })
+        .catch(function (err) {
+          // Fail open. An outage of the screening service is not a reason to
+          // lock someone out of a form, and the other password rules still
+          // apply. The failure is surfaced rather than swallowed silently.
+          $.formUtils.warn('Breached password check unavailable (' +
+            (err && err.message ? err.message : 'unknown error') +
+            '); allowing the value.');
+          done(true);
+        });
+    },
+    errorMessage: 'This password has appeared in a known data breach. Please choose a different one.',
+    errorMessageKey: 'badBreachedPassword'
+  });
+
+  /*
+   * NIST SP 800-63B rev 4 asks that at least 64 characters be accepted and
+   * that nothing be silently truncated. Warn rather than override: the author
+   * may be working to a backend limit they do not control.
+   */
+  $.formUtils.$win.bind('validatorsLoaded formValidationSetup', function (evt, $form) {
+    if (!$form) {
+      $form = $('form');
+    }
+    $form.find('input[type="password"][maxlength]').each(function () {
+      var $input = $(this),
+        max = parseInt($input.attr('maxlength'), 10);
+      if (!isNaN(max) && max < 64) {
+        $.formUtils.warn('Password field "' + ($input.attr('name') || '(unnamed)') +
+          '" caps input at ' + max + ' characters. NIST SP 800-63B asks that at ' +
+          'least 64 be accepted, and that longer values are not truncated.');
+      }
+    });
+  });
+
+
   /*
    * Simple spam check
    */
@@ -82,19 +205,39 @@
     };
 
 
+  /**
+   * Where the card type is kept while a form is being validated.
+   *
+   * The form, when there is one, so that the credit card field and the cvv
+   * field can see the same value without leaking it to other forms on the
+   * page. Falls back to the element for a detached input.
+   *
+   * @param {jQuery} $el
+   * @param {jQuery} [$form]
+   * @return {jQuery}
+   */
+  var cardTypeHolder = function ($el, $form) {
+    return $form && $form.length ? $form : $el;
+  };
+
   /*
    * Credit card
    */
   $.formUtils.addValidator({
     name: 'creditcard',
-    validatorFunction: function (value, $el) {
+    validatorFunction: function (value, $el, conf, language, $form) {
       var allowing = $.split($el.valAttr('allowing') || ''),
         allowsAmex = $.inArray('amex', allowing) > -1,
         checkOnlyAmex = allowsAmex && allowing.length === 1;
 
-      // Store for cvv validator
-      $el.data('checkOnlyAmex', checkOnlyAmex);
-      $el.data('allowsAmex', allowsAmex);
+      // Hand the card type to the cvv validator, which needs it to know how
+      // many digits to expect. It goes on the form rather than on this input:
+      // the cvv validator reads from its own element and so never saw it here,
+      // and module scope leaked the value between forms on the same page.
+      cardTypeHolder($el, $form).data('jfvCardTypes', {
+        allowsAmex: allowsAmex,
+        checkOnlyAmex: checkOnlyAmex
+      });
 
       // Correct length
       if (allowing.length > 0) {
@@ -152,11 +295,14 @@
    */
   $.formUtils.addValidator({
     name: 'cvv',
-    validatorFunction: function (val, $el) {
+    validatorFunction: function (val, $el, conf, language, $form) {
       if (val.replace(/[0-9]/g, '') === '') {
         val = val + '';
-        var checkOnlyAmex = $el.data('checkOnlyAmex') || false,
-          allowsAmex = $el.data('allowsAmex') || false;
+        // The per-element values are still honoured first, so anything that
+        // set them directly keeps working.
+        var cardTypes = cardTypeHolder($el, $form).data('jfvCardTypes') || {},
+          checkOnlyAmex = $el.data('checkOnlyAmex') || cardTypes.checkOnlyAmex || false,
+          allowsAmex = $el.data('allowsAmex') || cardTypes.allowsAmex || false;
         if (checkOnlyAmex) {
           return val.length === 4;
         } else if (allowsAmex) {
@@ -188,104 +334,129 @@
     errorMessageKey: 'badStrength',
 
     /**
-     * Code more or less borrowed from jQuery plugin "Password Strength Meter"
-     * written by Darren Mason (djmason9@gmail.com), myPocket technologies (www.mypocket-technologies.com)
+     * Score a password from 0 (unusable) to 3 (strong).
+     *
+     * Rewritten in 3.0 around NIST SP 800-63B rev 4. The previous scoring was
+     * composition driven -- points for mixed case, for digits, for symbols --
+     * which rev 4 explicitly retired, because it rewards short predictable
+     * passwords over long ones. Under the old scoring "P@ss1!" rated strong
+     * and a sixteen character lowercase password did not.
+     *
+     * Length is now the only thing that earns score, and only length the
+     * attacker actually has to guess: runs and sequences are discounted,
+     * because once the pattern is known the rest of it comes for free.
+     *
      * @param {String} password
-     * @return {Number}
+     * @return {Number} 0-3
      */
     calculatePasswordStrength: function (password) {
+      var value = String(password === undefined || password === null ? '' : password),
+        validator = $.formUtils.validators.validate_strength,
+        effective;
 
-      if (password.length < 4) {
+      if (!value.length) {
         return 0;
       }
 
-      var score = 0;
-
-      var checkRepetition = function (pLen, str) {
-        var res = '';
-        for (var i = 0; i < str.length; i++) {
-          var repeated = true;
-
-          for (var j = 0; j < pLen && (j + i + pLen) < str.length; j++) {
-            repeated = repeated && (str.charAt(j + i) === str.charAt(j + i + pLen));
-          }
-          if (j < pLen) {
-            repeated = false;
-          }
-          if (repeated) {
-            i += pLen - 1;
-            repeated = false;
-          }
-          else {
-            res += str.charAt(i);
-          }
-        }
-        return res;
-      };
-
-      //password length
-      score += password.length * 4;
-      score += ( checkRepetition(1, password).length - password.length ) * 1;
-      score += ( checkRepetition(2, password).length - password.length ) * 1;
-      score += ( checkRepetition(3, password).length - password.length ) * 1;
-      score += ( checkRepetition(4, password).length - password.length ) * 1;
-
-      //password has 3 numbers
-      if (password.match(/(.*[0-9].*[0-9].*[0-9])/)) {
-        score += 5;
-      }
-
-      //password has 2 symbols
-      if (password.match(/(.*[!,@,#,$,%,^,&,*,?,_,~].*[!,@,#,$,%,^,&,*,?,_,~])/)) {
-        score += 5;
-      }
-
-      //password has Upper and Lower chars
-      if (password.match(/([a-z].*[A-Z])|([A-Z].*[a-z])/)) {
-        score += 10;
-      }
-
-      //password has number and chars
-      if (password.match(/([a-zA-Z])/) && password.match(/([0-9])/)) {
-        score += 15;
-      }
-      //
-      //password has number and symbol
-      if (password.match(/([!,@,#,$,%,^,&,*,?,_,~])/) && password.match(/([0-9])/)) {
-        score += 15;
-      }
-
-      //password has char and symbol
-      if (password.match(/([!,@,#,$,%,^,&,*,?,_,~])/) && password.match(/([a-zA-Z])/)) {
-        score += 15;
-      }
-
-      //password is just a numbers or chars
-      if (password.match(/^\w+$/) || password.match(/^\d+$/)) {
-        score -= 10;
-      }
-
-      //verifying 0 < score < 100
-      if (score < 0) {
-        score = 0;
-      }
-      if (score > 100) {
-        score = 100;
-      }
-
-      if (score < 20) {
+      // Length does not rescue a password that is already in every word list;
+      // "password123456" is still guessed early.
+      if (validator.isCommonPassword(value)) {
         return 0;
       }
-      else if (score < 40) {
+
+      effective = validator.effectiveLength(value);
+
+      // Thresholds follow rev 4: 8 is the floor for an account carrying a
+      // second factor, 15 the floor for one that does not.
+      if (effective < 8) {
+        return 0;
+      }
+      if (effective < 12) {
         return 1;
       }
-      else if (score <= 60) {
+      if (effective < 15) {
         return 2;
       }
-      else {
-        return 3;
-      }
+      return 3;
     },
+
+    /**
+     * Length discounted for predictability.
+     *
+     * A character that continues an established run ("aaaa") or a run of
+     * consecutive code points ("abcd", "9876") is most of the way to free for
+     * an attacker, so from the third character of a pattern onward it barely
+     * counts. The first two still carry information.
+     *
+     * @param {String} value
+     * @return {Number}
+     */
+    effectiveLength: function (value) {
+      var total = 0,
+        runLength = 1,
+        prevDelta = null,
+        delta,
+        i;
+
+      for (i = 0; i < value.length; i++) {
+        if (i === 0) {
+          total += 1;
+          continue;
+        }
+
+        delta = value.charCodeAt(i) - value.charCodeAt(i - 1);
+
+        if (delta === prevDelta && (delta === 0 || delta === 1 || delta === -1)) {
+          runLength++;
+        } else {
+          runLength = 1;
+        }
+
+        total += runLength >= 3 ? 0.25 : 1;
+        prevDelta = delta;
+      }
+
+      return total;
+    },
+
+    /**
+     * Whether the value is one of the passwords that dominate every breach
+     * corpus, ignoring case and any trailing digits or punctuation.
+     *
+     * The list is deliberately short. It is a floor, not coverage -- real
+     * coverage comes from the "breached" validator, which checks the value
+     * against Have I Been Pwned.
+     *
+     * @param {String} value
+     * @return {Boolean}
+     */
+    isCommonPassword: function (value) {
+      var list = $.formUtils.validators.validate_strength.commonPasswords,
+        lower = value.toLowerCase(),
+        stripped = lower.replace(/[0-9!@#$%^&*_.\-]+$/, '');
+
+      return $.inArray(lower, list) > -1 ||
+        (stripped.length > 2 && $.inArray(stripped, list) > -1);
+    },
+
+    commonPasswords: [
+      '123456', 'password', '12345678', 'qwerty', '123456789', '12345',
+      '1234', '111111', '1234567', 'dragon', '123123', 'baseball', 'abc123',
+      'football', 'monkey', 'letmein', 'shadow', 'master', '666666',
+      'qwertyuiop', '123321', 'mustang', '1234567890', 'michael', '654321',
+      'superman', '1qaz2wsx', '7777777', '121212', '000000', 'qazwsx',
+      '123qwe', 'killer', 'trustno1', 'jordan', 'jennifer', 'zxcvbnm',
+      'asdfgh', 'hunter', 'buster', 'soccer', 'harley', 'batman', 'andrew',
+      'tigger', 'sunshine', 'iloveyou', 'charlie', 'robert', 'thomas',
+      'hockey', 'ranger', 'daniel', 'starwars', 'klaster', '112233',
+      'george', 'computer', 'michelle', 'jessica', 'pepper', 'zxcvbn',
+      '555555', '11111111', '131313', 'freedom', '777777', 'passw0rd',
+      'maggie', '159753', 'aaaaaa', 'ginger', 'princess', 'joshua',
+      'cheese', 'amanda', 'summer', 'ashley', 'nicole', 'chelsea',
+      'biteme', 'matthew', 'access', 'yankees', '987654321', 'dallas',
+      'austin', 'thunder', 'taylor', 'matrix', 'welcome', 'admin',
+      'login', 'secret', 'qwerty123', 'letmein123'
+    ],
 
     strengthDisplay: function ($el, options) {
       var config = {
@@ -301,7 +472,8 @@
         $.extend(config, options);
       }
 
-      $el.bind('keyup', function () {
+      // input rather than keyup, so the meter also reacts to paste and autofill.
+      $el.bind('input', function () {
         var val = $(this).val(),
           $parent = typeof config.parent === 'undefined' ? $(this).parent() : $(config.parent),
           $displayContainer = $parent.find('.strength-meter'),
@@ -370,7 +542,8 @@
       if (typeof reqParams === 'string') {
         try {
           reqParams = JSON.parse(reqParams);
-        } catch(e) {
+        } catch (ignored) {
+          // Malformed req-params are treated as none at all.
           reqParams = {};
         }
       }
@@ -460,9 +633,22 @@
    *    data-validation-require-special-char,
    *    data-validation-require-numeral
   */
+  var hasWarnedAboutComplexity = false;
+
   $.formUtils.addValidator({
     name : 'complexity',
     validatorFunction : function(value, $input, config, language) {
+      if (!hasWarnedAboutComplexity) {
+        hasWarnedAboutComplexity = true;
+        $.formUtils.warn(
+          'data-validation="complexity" enforces the composition rules that NIST ' +
+          'SP 800-63B rev 4 retired, because they push people toward short ' +
+          'predictable passwords. Prefer data-validation="strength", and ' +
+          'data-validation="breached" alongside it. complexity is kept for sites ' +
+          'working to a policy they do not control.'
+        );
+      }
+
       var numRequiredUppercaseChars = $input.valAttr('require-uc-letter') || '0',
         numRequiredLowercaseChars = $input.valAttr('require-lc-letter') || '0',
         numRequiredSpecialChars = $input.valAttr('require-special-char') || '0',

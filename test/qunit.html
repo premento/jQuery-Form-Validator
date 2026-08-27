@@ -245,7 +245,15 @@
                 {val: 'sasas.se', isValid : false},
                 {val: 'sasas-sdsd.com', isValid : false},
                 {val: '"sasas-sdsd"@monkey.com', isValid : true},
-                {val: '"sasas-sdsd"sdfsdf.sdff@monkey.com', isValid : true},
+                // RFC 5322 gives local-part = dot-atom / quoted-string /
+                // obs-local-part, and obs-local-part = word *("." word). A
+                // quoted string followed straight by more text, with no dot
+                // between them, is not a valid word sequence under any of
+                // those, and RFC 5321 is stricter still. This expectation was
+                // also inconsistent with the case below: text after a closing
+                // quote and text before an opening one are the same kind of
+                // malformation, so both belong on the same side.
+                {val: '"sasas-sdsd"sdfsdf.sdff@monkey.com', isValid : false},
                 {val: 'sdf"sasas-sdsd"@monkey.com', isValid : false}
             ];
 
@@ -1267,11 +1275,918 @@
         });
       });
 
+
+      /*
+       * Accessibility (ARIA)
+       *
+       * #dummy-form is visibility:hidden, which stops the browser from moving
+       * focus into it, so these tests build a visible fixture of their own.
+       */
+      function a11yFixture() {
+        // Never let a fixture actually submit: async validation re-triggers
+        // submit when it resolves, which would navigate away and reload the
+        // test runner in a loop.
+        return $('<form></form>')
+          .attr('id', 'a11y-form')
+          .on('submit', function (evt) { evt.preventDefault(); })
+          .appendTo('body');
+      }
+
+      function a11yInput($f, val, validation, attrs) {
+        // One wrapper per field: inputs sharing a parent also share a single
+        // error message element.
+        var $wrap = $('<p></p>').appendTo($f),
+            $el = $('<input />', $.extend({
+              type: 'text',
+              value: val,
+              'data-validation': validation
+            }, attrs || {}));
+        return $el.appendTo($wrap);
+      }
+
+      test('Accessibility: aria-invalid and aria-describedby track validity', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {errorMessagePosition: 'inline'}),
+            $el = a11yInput($f, '', 'required', {name: 'a11y-required'}),
+            describedBy;
+
+        $el.validateInputOnBlur($.formUtils.LANG, conf, false, 'blur');
+
+        assert.equal($el.attr('aria-invalid'), 'true', 'aria-invalid is set when validation fails');
+
+        describedBy = $el.attr('aria-describedby');
+        assert.ok(!!describedBy, 'aria-describedby is set when validation fails');
+        assert.equal($f.find('#' + describedBy).length, 1, 'aria-describedby resolves to an element');
+        assert.ok($f.find('#' + describedBy).text().length > 0, 'the referenced element carries the error text');
+        assert.equal($f.find('#' + describedBy).attr('aria-live'), 'polite', 'the error message is a polite live region');
+
+        $el.val('something');
+        $el.validateInputOnBlur($.formUtils.LANG, conf, false, 'blur');
+
+        assert.equal($el.attr('aria-invalid'), undefined, 'aria-invalid is removed once the field is valid');
+        assert.equal($el.attr('aria-describedby'), undefined, 'aria-describedby is removed once the field is valid');
+
+        $f.remove();
+      });
+
+      test('Accessibility: an author supplied aria-describedby survives validation', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {errorMessagePosition: 'inline'}),
+            $el = a11yInput($f, '', 'required', {name: 'a11y-hint', 'aria-describedby': 'author-hint'}),
+            tokens;
+
+        $el.validateInputOnBlur($.formUtils.LANG, conf, false, 'blur');
+
+        tokens = $el.attr('aria-describedby').split(/\s+/);
+        assert.ok($.inArray('author-hint', tokens) > -1, 'the author supplied token survives an error');
+        assert.equal(tokens.length, 2, 'the error message id is appended rather than substituted');
+
+        $el.val('something');
+        $el.validateInputOnBlur($.formUtils.LANG, conf, false, 'blur');
+
+        assert.equal($el.attr('aria-describedby'), 'author-hint', 'only the token owned by the plugin is removed');
+
+        $f.remove();
+      });
+
+      test('Accessibility: the error summary is an alert linking to each field', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {
+              errorMessagePosition: 'top',
+              scrollToTopOnError: false,
+              focusOnError: false
+            }),
+            $summary, $links, href;
+
+        a11yInput($f, '', 'required', {name: 'a11y-top-required'});
+        a11yInput($f, 'not-an-email', 'email', {name: 'a11y-top-email'});
+
+        assert.equal($f.isValid($.formUtils.LANG, conf, true), false, 'the form is invalid');
+
+        $summary = $f.find('.' + conf.errorMessageClass + '.alert');
+        assert.equal($summary.length, 1, 'an error summary is rendered');
+        assert.equal($summary.attr('role'), 'alert', 'the summary is announced as an alert');
+
+        $links = $summary.find('ul li a');
+        assert.ok($links.length >= 1, 'summary entries are links');
+
+        href = $links.eq(0).attr('href');
+        assert.equal(href.charAt(0), '#', 'the entry links to a fragment');
+        assert.equal($f.find(href).length, 1, 'the fragment resolves to a field in the form');
+
+        $f.remove();
+      });
+
+      test('Accessibility: focus moves to the first invalid field on submit', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {
+              errorMessagePosition: 'inline',
+              scrollToTopOnError: false,
+              focusOnError: true
+            }),
+            $first = a11yInput($f, '', 'required', {name: 'a11y-focus-one'});
+
+        a11yInput($f, '', 'required', {name: 'a11y-focus-two'});
+
+        $f.isValid($.formUtils.LANG, conf, true);
+
+        assert.equal(document.activeElement, $first.get(0), 'focus lands on the first invalid input');
+
+        $f.remove();
+      });
+
+
+      test('Accessibility: fields are flagged invalid even when errors show in a summary', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {
+              errorMessagePosition: 'top',
+              scrollToTopOnError: false,
+              focusOnError: false
+            }),
+            $el = a11yInput($f, '', 'required', {name: 'a11y-summary-only'});
+
+        $f.isValid($.formUtils.LANG, conf, true);
+
+        // With a summary there is no inline message to point at, but the field
+        // itself still has to report its state to assistive technology.
+        assert.equal($el.attr('aria-invalid'), 'true', 'aria-invalid is set in summary mode too');
+
+        $el.val('something');
+        $f.isValid($.formUtils.LANG, conf, true);
+        assert.equal($el.attr('aria-invalid'), undefined, 'aria-invalid clears once the field is valid');
+
+        $f.remove();
+      });
+
+
+      /*
+       * Phase 2: native API + modern events
+       */
+
+      test('Modern events: a value change with no keystroke still re-validates', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {errorMessagePosition: 'inline'}),
+            $el = a11yInput($f, 'nope', 'email', {name: 'paste-target'});
+
+        // Fail once, which is what attaches live re-validation.
+        $el.validateInputOnBlur($.formUtils.LANG, conf, true, 'blur');
+        assert.equal($el.attr('aria-invalid'), 'true', 'starts out invalid');
+        assert.equal($el.valAttr('has-input-event'), 'true', 'live re-validation is attached');
+
+        // Paste, autofill, drag-and-drop and speech input all land like this:
+        // the value changes and "input" fires, but no key is ever released, so
+        // the old keyup binding never saw any of them.
+        $el.val('someone@example.com');
+        $el.get(0).dispatchEvent(new Event('input', {bubbles: true}));
+
+        assert.equal($el.attr('aria-invalid'), undefined, 'the pasted value cleared the error');
+
+        $f.remove();
+      });
+
+      test('Modern events: Tab no longer needs filtering out', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {errorMessagePosition: 'inline'}),
+            $el = a11yInput($f, '', 'required', {name: 'tab-target'}),
+            fired = 0;
+
+        $el.validateInputOnBlur($.formUtils.LANG, conf, true, 'blur');
+        $el.on('afterValidation', function() { fired++; });
+
+        // keyup fired for Tab used to reach the validator and had to be
+        // filtered out by keyCode; input does not fire for Tab at all.
+        $el.get(0).dispatchEvent(new KeyboardEvent('keyup', {bubbles: true, keyCode: 9}));
+        assert.equal(fired, 0, 'a Tab keystroke triggers no validation');
+
+        $f.remove();
+      });
+
+      test('Native API: the form is marked novalidate', function(assert) {
+        var $f = $('<form></form>').appendTo('body');
+        $('<input type="email" name="nv" data-validation="email" value="x">').appendTo($f);
+
+        $.validate({form: $f, modules: ''});
+        assert.equal($f.attr('novalidate'), 'novalidate', 'novalidate is applied');
+
+        $f.remove();
+      });
+
+      test('Native API: an author novalidate choice is left alone', function(assert) {
+        var $f = $('<form novalidate></form>').appendTo('body');
+        $.validate({form: $f, modules: '', novalidate: false});
+        // A bare boolean attribute reads back as an empty string, not its name.
+        assert.notEqual($f.attr('novalidate'), undefined, 'the author attribute survives novalidate:false');
+        $f.remove();
+      });
+
+      test('Native API: results are mirrored onto the element', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {errorMessagePosition: 'inline'}),
+            $el = a11yInput($f, 'nope', 'email', {name: 'mirror-target'}),
+            el = $el.get(0);
+
+        // The bridge attaches its mirroring handler during form setup.
+        $f.trigger('formValidationSetup', [$f, conf]);
+
+        $el.validateInputOnBlur($.formUtils.LANG, conf, false, 'blur');
+        assert.equal(el.validity.valid, false, 'the element reports itself invalid to the browser');
+        assert.equal(el.validity.customError, true, 'reported as a custom error');
+        assert.ok(el.validationMessage.length > 0, 'the browser carries our message');
+
+        $el.val('someone@example.com');
+        $el.validateInputOnBlur($.formUtils.LANG, conf, false, 'blur');
+        assert.equal(el.validity.valid, true, 'the element reports itself valid once corrected');
+
+        $f.remove();
+      });
+
+      test('Native API: the browser answers min/max constraints', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.formUtils.defaultConfig(),
+            $num = a11yInput($f, '5', 'native', {name: 'native-num', type: 'number', min: '10', max: '20'}),
+            result;
+
+        result = $.formUtils.validateInput($num, $.formUtils.LANG, conf, $f);
+        assert.equal(result.isValid, false, '5 is rejected against min=10');
+        assert.ok(result.errorMsg.length > 0, 'a message comes back with the rejection');
+
+        $num.val('15');
+        result = $.formUtils.validateInput($num, $.formUtils.LANG, conf, $f);
+        assert.equal(result.isValid, true, '15 is accepted');
+
+        $f.remove();
+      });
+
+      test('Native API: the browser answers type=email', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.formUtils.defaultConfig(),
+            $el = a11yInput($f, 'not-an-email', 'native', {name: 'native-email', type: 'email'}),
+            result;
+
+        result = $.formUtils.validateInput($el, $.formUtils.LANG, conf, $f);
+        assert.equal(result.isValid, false, 'a malformed address is rejected by the browser');
+        assert.equal(result.errorMsg, $.formUtils.LANG.badEmail, 'our own message is used, not the browser string');
+
+        $el.val('someone@example.com');
+        result = $.formUtils.validateInput($el, $.formUtils.LANG, conf, $f);
+        assert.equal(result.isValid, true, 'a well formed address is accepted');
+
+        $f.remove();
+      });
+
+      test('Dynamic fields: a field added after setup gets wired up', function(assert) {
+        var done = assert.async(),
+            $f = $('<form></form>').appendTo('body'),
+            $late;
+
+        $.validate({
+          form: $f,
+          modules: '',
+          observeDynamicFields: true,
+          errorMessagePosition: 'inline'
+        });
+
+        $late = $('<input type="text" name="late-arrival" data-validation="required" value="">')
+          .appendTo($('<p></p>').appendTo($f));
+
+        // The observer coalesces insertions, so give it a turn of the loop.
+        setTimeout(function() {
+          $late.trigger('blur');
+          assert.equal($late.attr('aria-invalid'), 'true',
+            'a field added after $.validate() is validated on blur');
+          $f.remove();
+          done();
+        }, 50);
+      });
+
+
+      /*
+       * Phase 4: async UX + the error message template
+       *
+       * Every async test must release its validator. A validator left in
+       * flight keeps $.formUtils.haltValidation set, which is global and
+       * would make every later test see an invalid form.
+       */
+
+      test('Async: the field is marked busy rather than disabled', function(assert) {
+        var done = assert.async(),
+            release = null,
+            $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {errorMessagePosition: 'inline'}),
+            $el;
+
+        $.formUtils.addAsyncValidator({
+          name: 'phase4_busy',
+          validatorFunction: function(doneCb) { release = doneCb; },
+          errorMessage: 'nope',
+          errorMessageKey: ''
+        });
+
+        $el = a11yInput($f, 'x', 'phase4_busy', {
+          name: 'busy-target',
+          'data-validation-debounce': '0'
+        });
+        $f.trigger('formValidationSetup', [$f, conf]);
+        $el.validateInputOnBlur($.formUtils.LANG, conf, false, 'blur');
+
+        setTimeout(function() {
+          // Disabling steals focus, drops the field out of the tab order and
+          // omits it from submission entirely.
+          assert.equal($el.prop('disabled'), false, 'the field is not disabled while in flight');
+          assert.equal($el.attr('aria-busy'), 'true', 'the field reports itself busy');
+          assert.equal($el.hasClass('async-validation'), true, 'the styling hook is applied');
+
+          if (release) { release(true); }
+
+          setTimeout(function() {
+            assert.equal($el.attr('aria-busy'), undefined, 'busy is cleared once the check returns');
+            $f.remove();
+            done();
+          }, 30);
+        }, 30);
+      });
+
+      test('Async: a blur check waits out the debounce', function(assert) {
+        var done = assert.async(),
+            called = 0,
+            release = null,
+            $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {errorMessagePosition: 'inline'}),
+            $el;
+
+        $.formUtils.addAsyncValidator({
+          name: 'phase4_debounce',
+          validatorFunction: function(doneCb) { called++; release = doneCb; },
+          errorMessage: 'nope',
+          errorMessageKey: ''
+        });
+
+        $el = a11yInput($f, 'x', 'phase4_debounce', {
+          name: 'debounce-target',
+          'data-validation-debounce': '80'
+        });
+        $f.trigger('formValidationSetup', [$f, conf]);
+        $el.validateInputOnBlur($.formUtils.LANG, conf, false, 'blur');
+
+        assert.equal(called, 0, 'nothing goes out the moment the field is blurred');
+
+        setTimeout(function() {
+          assert.equal(called, 1, 'the check runs once the debounce has elapsed');
+          if (release) { release(true); }
+          setTimeout(function() { $f.remove(); done(); }, 20);
+        }, 200);
+      });
+
+      test('Async: submitting is not made to wait for the debounce', function(assert) {
+        var done = assert.async(),
+            called = 0,
+            release = null,
+            $f = a11yFixture(),
+            conf = $.formUtils.defaultConfig(),
+            $el;
+
+        $.formUtils.addAsyncValidator({
+          name: 'phase4_submit',
+          validatorFunction: function(doneCb) { called++; release = doneCb; },
+          errorMessage: 'nope',
+          errorMessageKey: ''
+        });
+
+        // A deliberately absurd debounce: submitting must ignore it.
+        $el = a11yInput($f, 'x', 'phase4_submit', {
+          name: 'submit-target',
+          'data-validation-debounce': '5000'
+        });
+        $f.trigger('formValidationSetup', [$f, conf]);
+
+        $.formUtils.validateInput($el, $.formUtils.LANG, conf, $f, 'submit');
+        assert.equal(called, 1, 'the check goes out at once despite a 5 second debounce');
+
+        if (release) { release(true); }
+        setTimeout(function() { $f.remove(); done(); }, 30);
+      });
+
+      test('Error summary: the errorMessageTemplate config is honoured', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {
+              errorMessagePosition: 'top',
+              scrollToTopOnError: false,
+              focusOnError: false,
+              errorMessageTemplate: {
+                container: '<section class="{errorMessageClass}" role="alert" data-custom="yes">{messages}</section>',
+                messages: '<h2>{errorTitle}</h2><ol>{fields}</ol>',
+                field: '<li data-target="{id}">{msg}</li>'
+              }
+            }),
+            $summary;
+
+        a11yInput($f, '', 'required', {name: 'tpl-target'});
+        $f.isValid($.formUtils.LANG, conf, true);
+
+        $summary = $f.find('section[data-custom="yes"]');
+        assert.equal($summary.length, 1, 'the custom container template is used');
+        assert.equal($summary.find('h2').length, 1, 'the custom messages template is used');
+        assert.equal($summary.find('ol > li[data-target]').length, 1,
+          'the custom field template is used, and receives the field id');
+
+        $f.remove();
+      });
+
+      test('Error summary: a partial template falls back to the defaults', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {
+              errorMessagePosition: 'top',
+              scrollToTopOnError: false,
+              focusOnError: false,
+              // Only one key overridden; the rest must still come from defaults.
+              errorMessageTemplate: {
+                messages: '<p class="lead">{errorTitle}</p><ul>{fields}</ul>'
+              }
+            }),
+            $summary;
+
+        a11yInput($f, '', 'required', {name: 'partial-target'});
+        $f.isValid($.formUtils.LANG, conf, true);
+
+        $summary = $f.find('.' + conf.errorMessageClass + '.alert');
+        assert.equal($summary.length, 1, 'the default container is still used');
+        assert.equal($summary.attr('role'), 'alert', 'the default container keeps its role');
+        assert.equal($summary.find('p.lead').length, 1, 'the overridden messages template is used');
+        assert.equal($summary.find('ul > li > a').length, 1, 'the default linked field template is still used');
+
+        $f.remove();
+      });
+
+      test('Error summary: a placeholder inside a message is not substituted', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {
+              errorMessagePosition: 'top',
+              scrollToTopOnError: false,
+              focusOnError: false
+            }),
+            text;
+
+        a11yInput($f, '', 'required', {
+          name: 'injection-target',
+          'data-validation-error-msg': 'Contains {fields} and {errorTitle}'
+        });
+
+        $f.isValid($.formUtils.LANG, conf, true);
+        text = $f.find('.' + conf.errorMessageClass + '.alert').text();
+
+        assert.ok(text.indexOf('Contains {fields} and {errorTitle}') > -1,
+          'placeholders occurring in message text are inserted literally');
+
+        $f.remove();
+      });
+
+
+      test('Async: editing between checks does not leave the form halted', function(assert) {
+        var done = assert.async(),
+            calls = [],
+            releases = [],
+            $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {errorMessagePosition: 'inline'}),
+            $el;
+
+        $.formUtils.addAsyncValidator({
+          name: 'phase4_halt',
+          validatorFunction: function(doneCb, value) { calls.push(value); releases.push(doneCb); },
+          errorMessage: 'taken',
+          errorMessageKey: ''
+        });
+
+        $el = a11yInput($f, 'a', 'phase4_halt', {
+          name: 'halt-target',
+          'data-validation-debounce': '60'
+        });
+        $f.trigger('formValidationSetup', [$f, conf]);
+
+        // Edit and blur repeatedly. Each pass halts the form; each edit resets
+        // the validator. HaltManager counts halts per form, so a reset that
+        // forgets its halt without releasing it leaves the counter above zero
+        // and the form permanently unsubmittable.
+        $.each(['ab', 'abc', 'abcd'], function(i, value) {
+          $el.val(value).trigger('change');
+          $el.validateInputOnBlur($.formUtils.LANG, conf, false, 'blur');
+        });
+
+        assert.equal(calls.length, 0, 'nothing has gone out while the debounce is still running');
+
+        setTimeout(function() {
+          assert.equal(calls.length, 1, 'the rapid edits coalesce into a single check');
+          assert.equal(calls[0], 'abcd', 'the check carries the value the user finished on');
+
+          $.each(releases, function(i, release) { release(true); });
+
+          setTimeout(function() {
+            assert.equal($.formUtils.haltValidation, false,
+              'the form is no longer halted once the check resolves');
+            assert.equal($el.attr('aria-busy'), undefined, 'busy is cleared');
+            $f.remove();
+            done();
+          }, 40);
+        }, 180);
+      });
+
+
+      /*
+       * Phase 5: password scoring and breach screening
+       */
+
+      function strengthOf(password) {
+        return $.formUtils.validators.validate_strength.calculatePasswordStrength(password);
+      }
+
+      test('Strength: length outranks composition', function(assert) {
+        // The whole point of the rewrite. Under the pre-3.0 scoring "P@ss1!"
+        // rated 3 (strong) because of its symbol, digit and mixed case, while
+        // a long lowercase password rated lower. NIST SP 800-63B rev 4 retired
+        // exactly that trade.
+        assert.equal(strengthOf('P@ss1!'), 0, 'a short password with every character class is not strong');
+        assert.equal(strengthOf('correcthorsebatterystaple'), 3, 'a long lowercase passphrase is strong');
+        assert.equal(strengthOf('thequickbrownfox'), 3, 'sixteen lowercase characters are strong');
+        assert.ok(strengthOf('correcthorsebatterystaple') > strengthOf('P@ss1!'),
+          'the long passphrase outranks the short complex one');
+      });
+
+      test('Strength: runs and sequences are discounted', function(assert) {
+        // Length an attacker does not have to guess should not count as length.
+        assert.equal(strengthOf('aaaaaaaaaaaaaaaaaaaa'), 0, 'a twenty character run is not strong');
+        assert.equal(strengthOf('abcdefghijklmnop'), 0, 'a sixteen character sequence is not strong');
+        assert.ok(strengthOf('abcdefghijklmnop') < strengthOf('thequickbrownfox'),
+          'the same length scores lower when it is sequential');
+      });
+
+      test('Strength: well known passwords score zero however long', function(assert) {
+        assert.equal(strengthOf('password'), 0, 'a word list entry scores zero');
+        assert.equal(strengthOf('Password1!'), 0, 'capitalising and suffixing does not rescue it');
+        assert.equal(strengthOf('letmein123'), 0, 'trailing digits do not rescue it');
+        assert.equal(strengthOf('qwertyuiop'), 0, 'a keyboard row scores zero');
+      });
+
+      test('Strength: the 0-3 scale and threshold attribute still work', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.formUtils.defaultConfig();
+
+        // Strings chosen to contain no runs or sequences, so effective length
+        // equals actual length and the thresholds are exercised exactly.
+        assert.equal(strengthOf(''), 0, 'an empty value scores zero');
+        assert.equal(strengthOf('x7k2m9q'), 0, 'seven characters score 0');
+        assert.equal(strengthOf('x7k2m9q4'), 1, 'eight characters score 1');
+        assert.equal(strengthOf('x7k2m9q4z3w'), 1, 'eleven still score 1');
+        assert.equal(strengthOf('x7k2m9q4z3wp'), 2, 'twelve score 2');
+        assert.equal(strengthOf('x7k2m9q4z3wp6t'), 2, 'fourteen still score 2');
+        assert.equal(strengthOf('x7k2m9q4z3wp6t1'), 3, 'fifteen score 3');
+
+        // The attribute is unchanged, so existing markup keeps working.
+        var $weak = a11yInput($f, 'x7k2m9q4', 'strength', {name: 'pw-weak', 'data-validation-strength': '3'});
+        assert.equal($.formUtils.validateInput($weak, $.formUtils.LANG, conf, $f).isValid, false,
+          'a score of 1 fails a required strength of 3');
+
+        var $strong = a11yInput($f, 'thequickbrownfox', 'strength', {name: 'pw-strong', 'data-validation-strength': '3'});
+        assert.equal($.formUtils.validateInput($strong, $.formUtils.LANG, conf, $f).isValid, true,
+          'a score of 3 passes a required strength of 3');
+
+        $f.remove();
+      });
+
+      test('Breached: only the hash prefix ever leaves the browser', function(assert) {
+        var done = assert.async(),
+            realFetch = window.fetch,
+            requested = null,
+            password = 'correcthorsebatterystaple',
+            $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {errorMessagePosition: 'inline'}),
+            $el;
+
+        window.fetch = function (url) {
+          requested = url;
+          return Promise.resolve({
+            ok: true,
+            text: function () { return Promise.resolve('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:1'); }
+          });
+        };
+
+        $el = a11yInput($f, password, 'breached', {
+          name: 'breach-privacy',
+          'data-validation-debounce': '0',
+          'data-validation-breach-url': 'https://example.test/range/'
+        });
+        $f.trigger('formValidationSetup', [$f, conf]);
+        $el.validateInputOnBlur($.formUtils.LANG, conf, false, 'blur');
+
+        setTimeout(function () {
+          window.fetch = realFetch;
+
+          assert.ok(requested !== null, 'a lookup was made');
+          assert.equal(requested.indexOf(password), -1, 'the password itself is never sent');
+
+          var sent = requested.replace('https://example.test/range/', '');
+          assert.equal(sent.length, 5, 'only five characters of the hash are sent');
+          assert.ok(/^[0-9A-F]{5}$/.test(sent), 'and they are hex');
+
+          $f.remove();
+          done();
+        }, 250);
+      });
+
+      test('Breached: a password found in the range is rejected', function(assert) {
+        var done = assert.async(),
+            realFetch = window.fetch,
+            password = 'correcthorsebatterystaple',
+            $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {errorMessagePosition: 'inline'});
+
+        // Work out the real suffix for this password, then have the stubbed
+        // range endpoint report it as seen. That exercises the actual local
+        // matching rather than a hand waved constant.
+        window.crypto.subtle.digest('SHA-1', new window.TextEncoder().encode(password))
+          .then(function (buffer) {
+            var view = new window.Uint8Array(buffer), out = [], i;
+            for (i = 0; i < view.length; i++) {
+              out.push(('0' + view[i].toString(16)).slice(-2));
+            }
+            var hex = out.join('').toUpperCase(),
+                suffix = hex.substring(5);
+
+            window.fetch = function () {
+              return Promise.resolve({
+                ok: true,
+                text: function () {
+                  return Promise.resolve('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:3\n' + suffix + ':42');
+                }
+              });
+            };
+
+            var $el = a11yInput($f, password, 'breached', {
+              name: 'breach-hit',
+              'data-validation-debounce': '0',
+              'data-validation-breach-url': 'https://example.test/range/'
+            });
+            $f.trigger('formValidationSetup', [$f, conf]);
+            $el.validateInputOnBlur($.formUtils.LANG, conf, false, 'blur');
+
+            setTimeout(function () {
+              window.fetch = realFetch;
+              assert.equal($el.attr('aria-invalid'), 'true', 'a breached password is rejected');
+              $f.remove();
+              done();
+            }, 250);
+          });
+      });
+
+      test('Breached: a lookup failure does not lock the user out', function(assert) {
+        var done = assert.async(),
+            realFetch = window.fetch,
+            $f = a11yFixture(),
+            conf = $.extend($.formUtils.defaultConfig(), {errorMessagePosition: 'inline'}),
+            $el;
+
+        window.fetch = function () {
+          return Promise.reject(new Error('network down'));
+        };
+
+        $el = a11yInput($f, 'correcthorsebatterystaple', 'breached', {
+          name: 'breach-fail',
+          'data-validation-debounce': '0',
+          'data-validation-breach-url': 'https://example.test/range/'
+        });
+        $f.trigger('formValidationSetup', [$f, conf]);
+        $el.validateInputOnBlur($.formUtils.LANG, conf, false, 'blur');
+
+        setTimeout(function () {
+          window.fetch = realFetch;
+          // Failing closed would make an outage of a third party service into
+          // an outage of the form.
+          assert.equal($el.attr('aria-invalid'), undefined, 'the value is allowed when the service cannot be reached');
+          assert.equal($.formUtils.haltValidation, false, 'and the form is not left halted');
+          $f.remove();
+          done();
+        }, 250);
+      });
+
+
+      /*
+       * Phase 6: message templates and Intl
+       */
+
+      test('i18n: placeholders are substituted', function(assert) {
+        var f = $.formUtils.formatMessage;
+        assert.equal(f('between {0} characters', [10]), 'between 10 characters', 'a single placeholder');
+        assert.equal(f('{0} of {1}', [3, 7]), '3 of 7', 'several placeholders');
+        assert.equal(f('{0} and {0}', ['x']), 'x and x', 'a repeated placeholder');
+        assert.equal(f('nothing to fill'), 'nothing to fill', 'a template with no placeholder');
+        assert.equal(f('unknown {9}', ['a']), 'unknown {9}', 'an index with no argument is left alone');
+      });
+
+      test('i18n: plural forms are chosen by count', function(assert) {
+        var forms = {one: '{0} item', other: '{0} items'};
+        assert.equal($.formUtils.formatMessage(forms, [1], 1), '1 item', 'the singular form for one');
+        assert.equal($.formUtils.formatMessage(forms, [3], 3), '3 items', 'the plural form for three');
+        assert.equal($.formUtils.formatMessage(forms, [0], 0), '0 items', 'the plural form for zero in English');
+        assert.equal($.formUtils.formatMessage(forms, [2]), '2 items',
+          'the other form when no count is given');
+      });
+
+      test('i18n: a template is preferred, fragments still work', function(assert) {
+        var withTemplate = {
+              lengthTooShort: 'shorter than {0} chars',
+              lengthTooShortStart: 'IGNORED',
+              lengthBadEnd: 'IGNORED'
+            },
+            legacyOnly = {
+              lengthTooShortStart: 'The input value is shorter than ',
+              lengthBadEnd: ' characters'
+            };
+
+        assert.equal(
+          $.formUtils.resolveCountMessage(withTemplate, 'lengthTooShort', 'lengthTooShortStart',
+            withTemplate.lengthBadEnd, 4, 4),
+          'shorter than 4 chars',
+          'the template wins when present');
+
+        // A language file or config that only knows the pre-3.0 fragment keys
+        // has to keep rendering exactly what it did before.
+        assert.equal(
+          $.formUtils.resolveCountMessage(legacyOnly, 'lengthTooShort', 'lengthTooShortStart',
+            legacyOnly.lengthBadEnd, 4, 4),
+          'The input value is shorter than 4 characters',
+          'the fragments are used when no template exists');
+      });
+
+      test('i18n: the length validator renders through the template', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.formUtils.defaultConfig(),
+            $el = a11yInput($f, 'ab', 'length', {name: 'len-target', 'data-validation-length': 'min4'}),
+            result = $.formUtils.validateInput($el, $.formUtils.LANG, conf, $f);
+
+        assert.equal(result.isValid, false, 'a value under the minimum is rejected');
+        assert.equal(result.errorMsg, 'The input value is shorter than 4 characters',
+          'and the message reads as a whole sentence');
+
+        $f.remove();
+      });
+
+      test('i18n: every bundled language composes the same sentence', function(assert) {
+        // The templates were derived from each language's own fragments, so a
+        // template must render byte-identically to the concatenation it
+        // replaced. This guards against a botched migration.
+        var lang = $.formUtils.LANG;
+        if (lang.lengthTooShort === undefined || lang.lengthBadEnd === undefined) {
+          assert.ok(true, 'this language has no length template loaded');
+          return;
+        }
+        var viaTemplate = $.formUtils.formatMessage(lang.lengthTooShort, [4], 4),
+            viaFragments = lang.lengthTooShortStart + 4 + lang.lengthBadEnd;
+
+        if (typeof lang.lengthTooShort === 'object') {
+          // English carries real plural forms, so only the plural branch can
+          // match the old fragment wording.
+          viaTemplate = $.formUtils.formatMessage(lang.lengthTooShort, [4], 4);
+        }
+        assert.equal(viaTemplate, viaFragments,
+          'the template renders what the fragments did');
+      });
+
+      test('Intl: the locale decimal separator is available but not assumed', function(assert) {
+        var sep = $.formUtils.localeDecimalSeparator();
+        assert.ok(sep === '.' || sep === ',' || sep.length === 1, 'a single separator character is returned');
+
+        // Following the browser locale by default would silently change what a
+        // form accepts, so the default stays '.'.
+        assert.equal($.formUtils.defaultConfig().decimalSeparator, '.',
+          'the default is still a full stop, not the browser locale');
+      });
+
+      test('Intl: numberFormat sanitation no longer requires numeral', function(assert) {
+        var realNumeral = window.numeral;
+        try {
+          window.numeral = undefined;
+          // Used to throw ReferenceError outright.
+          assert.equal($.formUtils.unformatNumber('1 234 567,89'), '1234567,89',
+            'grouping is stripped without numeral present');
+        } finally {
+          window.numeral = realNumeral;
+        }
+      });
+
+
+      /*
+       * Regressions from commit c017200 ("Fix critical and high-severity bugs
+       * across validation modules"), which over-corrected in five places.
+       */
+
+      test('Regression: internationalised TLDs are accepted', function(assert) {
+        var domain = $.formUtils.validators.validate_domain.validatorFunction;
+
+        // A-labels legitimately contain hyphens. Rejecting every non
+        // alphanumeric character in the TLD turned away every IDN.
+        assert.equal(domain('test.xn--fiqz9s'), true, 'xn--fiqz9s (.中国)');
+        assert.equal(domain('example.xn--p1ai'), true, 'xn--p1ai (.рф)');
+        assert.equal(domain('example.com'), true, 'an ordinary TLD still passes');
+
+        // ...without letting anything with a hyphen through.
+        assert.equal(domain('example.-com'), false, 'a TLD may not start with a hyphen');
+        assert.equal(domain('example.com-'), false, 'nor end with one');
+        assert.equal(domain('example.c'), false, 'a single letter TLD is still rejected');
+        assert.equal(domain('example.12'), false, 'an all numeric TLD is still rejected');
+      });
+
+      test('Regression: the card type reaches the cvv validator', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.formUtils.defaultConfig(),
+            $card = a11yInput($f, '378282246310005', 'creditcard', {name: 'amex-card', 'data-validation-allowing': 'amex'}),
+            $cvv = a11yInput($f, '1234', 'cvv', {name: 'amex-cvv'});
+
+        // The credit card validator works out the card type; the cvv validator
+        // needs it to know whether to expect three digits or four. Keeping that
+        // on the card element meant the cvv validator never saw it.
+        $.formUtils.validateInput($card, $.formUtils.LANG, conf, $f);
+
+        assert.equal($.formUtils.validateInput($cvv, $.formUtils.LANG, conf, $f).isValid, true,
+          'four digits are accepted for an amex-only form');
+
+        $cvv.val('123');
+        assert.equal($.formUtils.validateInput($cvv, $.formUtils.LANG, conf, $f).isValid, false,
+          'three digits are rejected for an amex-only form');
+
+        $f.remove();
+      });
+
+      test('Regression: the card type does not leak between forms', function(assert) {
+        // This is what moving the state off module scope was meant to fix, and
+        // it has to keep working now that the state lives on the form.
+        var conf = $.formUtils.defaultConfig(),
+            $amexForm = a11yFixture(),
+            $visaForm = a11yFixture(),
+            $amexCard = a11yInput($amexForm, '378282246310005', 'creditcard',
+              {name: 'a-card', 'data-validation-allowing': 'amex'}),
+            $visaCard = a11yInput($visaForm, '4111111111111111', 'creditcard',
+              {name: 'v-card', 'data-validation-allowing': 'visa'}),
+            $amexCvv = a11yInput($amexForm, '1234', 'cvv', {name: 'a-cvv'}),
+            $visaCvv = a11yInput($visaForm, '1234', 'cvv', {name: 'v-cvv'});
+
+        $.formUtils.validateInput($amexCard, $.formUtils.LANG, conf, $amexForm);
+        $.formUtils.validateInput($visaCard, $.formUtils.LANG, conf, $visaForm);
+
+        assert.equal($.formUtils.validateInput($amexCvv, $.formUtils.LANG, conf, $amexForm).isValid, true,
+          'four digits pass on the amex form');
+        assert.equal($.formUtils.validateInput($visaCvv, $.formUtils.LANG, conf, $visaForm).isValid, false,
+          'four digits fail on the visa form, so the amex form did not bleed into it');
+
+        $amexForm.remove();
+        $visaForm.remove();
+      });
+
+      test('Regression: a dot is only a thousands separator on a group boundary', function(assert) {
+        var $f = a11yFixture(),
+            conf = $.formUtils.defaultConfig();
+
+        function check(value) {
+          var $el = a11yInput($f, value, 'number', {
+            name: 'grp-' + value.replace(/\W/g, '_'),
+            'data-validation-allowing': 'float,negative,number',
+            'data-validation-decimal-separator': ','
+          });
+          return $.formUtils.validateInput($el, $.formUtils.LANG, conf, $f).isValid;
+        }
+
+        // Stripping every dot unconditionally turned "1.0236" -- a dot used as
+        // a decimal point, which this input does not accept -- into 10236.
+        assert.equal(check('1.0236'), false, '1.0236 is not a grouped number');
+        assert.equal(check('1.02'), false, 'nor is 1.02');
+        assert.equal(check('1,023'), true, 'a comma is the decimal separator here');
+        assert.equal(check('1.234'), true, '1.234 is a properly grouped thousand');
+        assert.equal(check('1.234.567'), true, 'and so is 1.234.567');
+        assert.equal(check('1.234.567,89'), true, 'grouping plus a decimal part');
+
+        $f.remove();
+      });
+
+      test('Regression: a date format need not carry every unit', function(assert) {
+        var parse = function (val, format) {
+          return $.formUtils.parseDate(val, format);
+        };
+
+        // findDateUnit returns -1 for an absent unit, and the guard treated
+        // that as an invalid zero, so any format without a day was rejected.
+        assert.notEqual(parse('02/2000', 'mm/yyyy'), false, 'mm/yyyy is a usable format');
+        assert.deepEqual(parse('02/2000', 'mm/yyyy'), [2000, 2, 1],
+          'the absent day comes back as 1 so date arithmetic still works');
+
+        assert.notEqual(parse('2000-02-29', 'yyyy-mm-dd'), false, 'a full date still parses');
+        assert.equal(parse('13/2000', 'mm/yyyy'), false, 'an impossible month is still rejected');
+        assert.equal(parse('00/2000', 'mm/yyyy'), false, 'and so is a zero month');
+        assert.equal(parse('2013-02-29', 'yyyy-mm-dd'), false, '29 February in a common year is still rejected');
+        assert.equal(parse('2000-04-31', 'yyyy-mm-dd'), false, '31 April is still rejected');
+      });
+
         // TODO: Write more tests...
     }
 
     $.validate({
-        modules : 'security, location, sweden, file, date, sanitize, uk, poland, color',
+        modules : 'security, location, sweden, file, date, sanitize, uk, poland, color, native',
         onModulesLoaded: function( $form ) {
             if( window.console && window.console.log )
                 console.log('About to run all tests');

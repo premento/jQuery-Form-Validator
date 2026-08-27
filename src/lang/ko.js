@@ -26,6 +26,18 @@
       badDate: '날짜를 정확하게 입력하지 않았습니다.',
       lengthBadStart: '입력 값은 ',
       lengthBadEnd: ' 사이의 문자여야 합니다.',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: '입력 값은 {0} 사이의 문자여야 합니다.',
+      lengthTooShort: '입력 값의 길이가 {0} 사이의 문자여야 합니다.',
+      lengthTooLong: '입력 값의 길이가 {0} 사이의 문자여야 합니다.',
+      groupCheckedRange: '{0} 개 항목을 선택해야 합니다.',
+      groupCheckedTooFew: '최소한 {0} 개 항목 이상을 선택해야 합니다.',
+      groupCheckedTooMany: '{0} 개 항목 이하를 선택해야 합니다.',
+      badNumberOfSelectedOptions: '최소한 {0} 개 항목 이상을 선택해야 합니다.',
       lengthTooLongStart: '입력 값의 길이가 ',
       lengthTooLongEnd: ' 보다 깁니다.',
       lengthTooShortStart: '입력 값의 길이가 ',

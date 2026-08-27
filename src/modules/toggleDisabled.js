@@ -53,7 +53,7 @@
           toggleFormState($(this), 'disabled');
         })
         .find('*[data-validation]')
-          .valAttr('event','keyup change')
+          .valAttr('event','input change')
           .on('validation', function(evt, valid) {
             if (!isCheckingIfFormValid) {
               isCheckingIfFormValid = true;

@@ -1,8 +1,8 @@
 {
   "name": "jquery-form-validator",
   "description": "With this feature rich jQuery plugin it becomes easy to validate user input while keeping your HTML markup clean from javascript code. Even though this plugin has a wide range of validation functions it's designed to require as little bandwidth as possible. This is achieved by grouping together validation functions in \"modules\", making it possible for the programmer to load only those functions that's needed to validate a particular form.",
-  "version": "2.3.79",
-  "main": "./form-validator/jquery.form-validator.min.js",
+  "version": "3.0.0",
+  "main": "./dist/jquery.form-validator.min.js",
   "keywords": [
     "form",
     "validator",
@@ -30,20 +30,75 @@
     "grunt-contrib-connect": "^5.0.1",
     "grunt-contrib-copy": "^1.0.0",
     "grunt-contrib-cssmin": "^5.0.0",
-    "grunt-contrib-jshint": "^3.2.0",
     "grunt-contrib-qunit": "^4.0.0",
     "grunt-contrib-uglify": "^5.2.2",
     "grunt-contrib-watch": "^1.1.0",
     "grunt-umd": "^3.0.0",
     "numeral": "^1.5.6",
     "qunitjs": "^1.23.1",
-    "jquery": "^1.8.0 || ^2.0.0 || ^3.0.0 || ^4.0.0"
+    "jquery": "^1.8.0 || ^2.0.0 || ^3.0.0 || ^4.0.0",
+    "@types/jquery": "^3.5.32",
+    "eslint": "^10.9.1",
+    "grunt-eslint": "^27.0.0"
   },
   "dependencies": {
     "jquery": "^1.8.0 || ^2.0.0 || ^3.0.0 || ^4.0.0"
   },
   "scripts": {
     "prepublish": "grunt prepublish",
-    "test": "grunt test"
+    "test": "grunt test",
+    "lint": "eslint ."
+  },
+  "module": "./dist/esm/jquery.form-validator.mjs",
+  "types": "./types/index.d.ts",
+  "sideEffects": true,
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./types/index.d.mts",
+        "default": "./dist/esm/jquery.form-validator.mjs"
+      },
+      "require": {
+        "types": "./types/index.d.cts",
+        "default": "./dist/jquery.form-validator.js"
+      },
+      "default": "./dist/jquery.form-validator.js"
+    },
+    "./modules/*": {
+      "import": {
+        "types": "./types/index.d.mts",
+        "default": "./dist/esm/modules/*.mjs"
+      },
+      "require": {
+        "types": "./types/index.d.cts",
+        "default": "./dist/*.js"
+      },
+      "default": "./dist/*.js"
+    },
+    "./lang/*": {
+      "import": {
+        "types": "./types/index.d.mts",
+        "default": "./dist/esm/lang/*.mjs"
+      },
+      "require": {
+        "types": "./types/index.d.cts",
+        "default": "./dist/lang/*.js"
+      },
+      "default": "./dist/lang/*.js"
+    },
+    "./css": "./dist/theme-default.css",
+    "./css/min": "./dist/theme-default.min.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "form-validator",
+    "types",
+    "src",
+    "README.md"
+  ],
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
   }
 }

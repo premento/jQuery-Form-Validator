@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "form-validator-tests",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["grunt", "connect:server:keepalive"],
+      "port": 8000
+    }
+  ]
+}

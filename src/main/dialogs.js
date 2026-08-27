@@ -9,6 +9,29 @@
     return $('<div></div>').text(str).html();
   };
 
+  // sanitizeHTML escapes & < >, but an id can legitimately reach us from a
+  // page author, so quotes have to go too before it lands in an attribute.
+  var sanitizeAttr = function(str) {
+    return sanitizeHTML(str).replace(/"/g, '&quot;');
+  };
+
+  /**
+   * Substitute {placeholders} in a template.
+   *
+   * One pass, so text substituted in for one key is never rescanned for
+   * another -- a validation message containing something like {fields} is
+   * inserted literally rather than treated as a placeholder.
+   *
+   * @param {String} template
+   * @param {Object} params
+   * @return {String}
+   */
+  var renderTemplate = function(template, params) {
+    return String(template).replace(/\{(\w+)\}/g, function(match, key) {
+      return Object.prototype.hasOwnProperty.call(params, key) ? params[key] : match;
+    });
+  };
+
   var dialogs = {
 
     resolveErrorMessage: function($elem, validator, validatorName, conf, language) {
@@ -52,6 +75,8 @@
         .addClass(conf.errorElementClass)
         .removeClass(conf.successElementClass);
 
+      $.formUtils.a11y.markInvalid($input);
+
       this.getParentContainer($input)
         .addClass(conf.inputParentClassOnError)
         .removeClass(conf.inputParentClassOnSuccess);
@@ -62,6 +87,7 @@
     },
     applyInputSuccessStyling: function($input, conf) {
       $input.addClass(conf.successElementClass);
+      $.formUtils.a11y.clearError($input);
       this.getParentContainer($input)
         .addClass(conf.inputParentClassOnSuccess);
     },
@@ -72,6 +98,8 @@
         .removeClass(conf.successElementClass)
         .removeClass(conf.errorElementClass)
         .css('border-color', '');
+
+      $.formUtils.a11y.clearError($input);
 
       var $parentContainer = dialogs.getParentContainer($input);
 
@@ -119,6 +147,7 @@
         setErrorMessage = function ($elem) {
           $.formUtils.$win.trigger('validationErrorDisplay', [$input, $elem]);
           $elem.html(sanitizeHTML(errorMsg));
+          $.formUtils.a11y.describeError($input, $elem);
         },
         addErrorToMessageContainer = function() {
           var $found = false;
@@ -165,12 +194,15 @@
         setErrorMessage($message);
       }
     },
-    setMessageInTopOfForm: function ($form, errorMessages, conf, lang) {
-      var view = '<div class="{errorMessageClass} alert alert-danger">'+
-                    '<strong>{errorTitle}</strong>'+
-                    '<ul>{fields}</ul>'+
-                '</div>',
-          $container = false;
+    setMessageInTopOfForm: function ($form, errorMessages, conf, lang, errorItems) {
+      // Merge over the defaults so a caller can override one key without
+      // having to restate the rest.
+      var template = $.extend({},
+            $.formUtils.defaultConfig().errorMessageTemplate,
+            conf.errorMessageTemplate || {}),
+          $container = false,
+          fields = '',
+          view;
 
       if (typeof conf.submitErrorMessageCallback === 'function') {
         $container = conf.submitErrorMessageCallback($form, errorMessages, conf);
@@ -180,18 +212,26 @@
         }
       }
 
-      var viewParams = {
-            errorTitle: lang.errorTitle,
-            fields: '',
-            errorMessageClass: conf.errorMessageClass
-          };
+      if (errorItems && errorItems.length) {
+        $.each(errorItems, function (i, item) {
+          fields += renderTemplate(template.field, {
+            id: sanitizeAttr($.formUtils.a11y.ensureInputId(item.$input)),
+            msg: sanitizeHTML(item.message)
+          });
+        });
+      } else {
+        // Nothing to link to, so use the template that does not try.
+        $.each(errorMessages, function (i, msg) {
+          fields += renderTemplate(template.fieldNoLink, {msg: sanitizeHTML(msg)});
+        });
+      }
 
-      $.each(errorMessages, function (i, msg) {
-        viewParams.fields += '<li>'+sanitizeHTML(msg)+'</li>';
-      });
-
-      $.each(viewParams, function(param, value) {
-        view = view.replace('{'+param+'}', value);
+      view = renderTemplate(template.container, {
+        errorMessageClass: sanitizeAttr(conf.errorMessageClass),
+        messages: renderTemplate(template.messages, {
+          errorTitle: sanitizeHTML(lang.errorTitle),
+          fields: fields
+        })
       });
 
       if ($container) {

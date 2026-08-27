@@ -43,6 +43,18 @@
       badDate: 'La fecha proporcionada no es válida',
       lengthBadStart: 'Su respuesta debe incluir entre ',
       lengthBadEnd: ' caracteres',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'Su respuesta debe incluir entre {0} caracteres',
+      lengthTooShort: 'Su respuesta debe de ser mayor a {0} caracteres',
+      lengthTooLong: 'Su respuesta debe de ser menor a {0} caracteres',
+      groupCheckedRange: 'Por favor, elija entre {0} ítem(s)',
+      groupCheckedTooFew: 'Por favor, elija al menos {0} ítem(s)',
+      groupCheckedTooMany: 'Por favor, elija un máximo de {0} ítem(s)',
+      badNumberOfSelectedOptions: 'Debe seleccionar al menos{0} respuesta(s)',
       lengthTooLongStart: 'Su respuesta debe de ser menor a ',
       lengthTooShortStart: 'Su respuesta debe de ser mayor a ',
       notConfirmed: 'Los valores proporcionados no pudieron ser confirmados',

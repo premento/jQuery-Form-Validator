@@ -1,7 +1,7 @@
 #Testing, not relevant to end user
 test/
 .travis.yml
-.jshintrc
+eslint.config.js
 
 #Not relevant to npm users
 bower.json

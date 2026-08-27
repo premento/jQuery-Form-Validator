@@ -26,6 +26,18 @@
       badDate: 'Nesprávné datum',
       lengthBadStart: 'Zadaná hodnota musí být v rozmezí ',
       lengthBadEnd: ' znaků',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'Zadaná hodnota musí být v rozmezí {0} znaků',
+      lengthTooShort: 'Zadaná hodnota je menší než {0} znaků',
+      lengthTooLong: 'Zadaná hodnota je větší než {0} znaků',
+      groupCheckedRange: 'Prosím, vyberte {0} složka(y)',
+      groupCheckedTooFew: 'Vyberte prosím nejméně {0} složka(y)',
+      groupCheckedTooMany: 'Vyberte prosím maximálně {0} složka(y)',
+      badNumberOfSelectedOptions: 'Musíte vybrat nejméně {0} odpověď',
       lengthTooLongStart: 'Zadaná hodnota je větší než ',
       lengthTooShortStart: 'Zadaná hodnota je menší než ',
       notConfirmed: 'Zadané hodnoty nebyly potvrzené',

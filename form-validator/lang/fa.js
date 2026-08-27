@@ -45,6 +45,18 @@
         badDate: 'تاریخ درستی را وارد نکرده اید',
         lengthBadStart: 'مقدار وارد شده باید ',
         lengthBadEnd: ' حرف باشد.',
+
+        // 3.0 templates, composed from the fragments above so the rendered
+        // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+        // forms may be added as {one: ..., other: ...} where this language
+        // needs them.
+        lengthBadRange: 'مقدار وارد شده باید {0} حرف باشد.',
+        lengthTooShort: 'مقدار ورودی کمتر از {0} حرف باشد.',
+        lengthTooLong: 'مقدار ورودی بیشتر از {0} حرف باشد.',
+        groupCheckedRange: 'لطفا بین {0} گزینه انتخاب کنید',
+        groupCheckedTooFew: 'لطفا حداقل {0} گزینه انتخاب کنید',
+        groupCheckedTooMany: 'لطفا حداکثر {0} گزینه انتخاب کنید',
+        badNumberOfSelectedOptions: 'شما باید حداقل  {0} پاسخ را انتخاب کنید',
         lengthTooLongStart: 'مقدار ورودی بیشتر از ',
         lengthTooShortStart: 'مقدار ورودی کمتر از ',
         notConfirmed: 'ورودی ها یکسان نیستند',

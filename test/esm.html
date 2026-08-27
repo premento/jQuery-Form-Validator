@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ES module smoke test</title>
+  <link rel="stylesheet" href="../dist/theme-default.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "jquery": "/node_modules/jquery/dist-module/jquery.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+
+<h1>ES module smoke test</h1>
+<p>
+  Loads the plugin and three of its modules with static <code>import</code>
+  statements. Nothing here may reach the network for a module file -- that is
+  the whole point of the ES module build.
+</p>
+
+<form id="esm-form">
+  <p>
+    <label for="esm-email">Email</label>
+    <input id="esm-email" type="text" name="esm-email" data-validation="email" value="nope">
+  </p>
+  <p>
+    <label for="esm-pass">Password</label>
+    <input id="esm-pass" type="password" name="esm-pass" data-validation="strength" data-validation-strength="2">
+  </p>
+  <p><input type="submit" value="Validate"></p>
+</form>
+
+<pre id="out">running...</pre>
+
+<script type="module">
+  // Side-effect imports: each module registers its validators on load. This is
+  // what replaces the runtime <script> injection the plugin used to do.
+  import jQuery from '../dist/esm/jquery.form-validator.mjs';
+  import '../dist/esm/modules/brazil.mjs';
+  import '../dist/esm/modules/color.mjs';
+  import '../dist/esm/modules/date.mjs';
+  import '../dist/esm/modules/file.mjs';
+  import '../dist/esm/modules/html5.mjs';
+  import '../dist/esm/modules/jsconf.mjs';
+  import '../dist/esm/modules/location.mjs';
+  import '../dist/esm/modules/logic.mjs';
+  import '../dist/esm/modules/native.mjs';
+  import '../dist/esm/modules/poland.mjs';
+  import '../dist/esm/modules/sanitize.mjs';
+  import '../dist/esm/modules/security.mjs';
+  import '../dist/esm/modules/sepa.mjs';
+  import '../dist/esm/modules/sweden.mjs';
+  import '../dist/esm/modules/toggleDisabled.mjs';
+  import '../dist/esm/modules/uk.mjs';
+  import '../dist/esm/lang/sv.mjs';
+
+  const results = {};
+
+  results.jQueryVersion = jQuery.fn.jquery;
+  results.formUtilsPresent = typeof jQuery.formUtils === 'object';
+  results.validateIsFunction = typeof jQuery.validate === 'function';
+  results.a11yPresent = typeof jQuery.formUtils.a11y === 'object';
+  results.coreValidatorCount = Object.keys(jQuery.formUtils.validators).length;
+
+  // Modules registered themselves through the static import.
+  results.securityLoaded = jQuery.formUtils.hasLoadedModule('security');
+  results.nativeLoaded = jQuery.formUtils.hasLoadedModule('native');
+  results.strengthValidator = !!jQuery.formUtils.validators.validate_strength;
+  results.nativeValidator = !!jQuery.formUtils.validators.validate_native;
+
+  // Name normalisation: the file registers "lang/sv" but $.validate() asks
+  // for "lang/sv.js". Both spellings must resolve to the same module.
+  results.langLoadedBare = jQuery.formUtils.hasLoadedModule('lang/sv');
+  results.langLoadedWithExtension = jQuery.formUtils.hasLoadedModule('lang/sv.js');
+
+  // Count module requests that go over the wire while $.validate() runs.
+  const before = performance.getEntriesByType('resource').length;
+
+  jQuery.validate({
+    form: '#esm-form',
+    modules: 'security, native',
+    lang: 'sv',
+    errorMessagePosition: 'inline',
+    scrollToTopOnError: false,
+    focusOnError: false
+  });
+
+  jQuery('#esm-form').submit();
+
+  const added = performance.getEntriesByType('resource')
+    .slice(before)
+    .map(function (e) { return e.name; })
+    .filter(function (n) { return /\.js(\?|$)/.test(n); });
+
+  results.moduleScriptsFetched = added;
+  results.noRuntimeInjection = added.length === 0;
+
+  // The plugin still works once wired up this way.
+  results.emailFlaggedInvalid = jQuery('#esm-email').attr('aria-invalid') === 'true';
+  results.messageIsSwedish = (jQuery('#esm-email').attr('aria-describedby')
+    ? document.getElementById(jQuery('#esm-email').attr('aria-describedby')).textContent
+    : '');
+
+  // Run every registered validator once. ES modules are always strict, and a
+  // strict-mode violation inside a validator body (an undeclared loop counter,
+  // say) only throws when the validator is actually called -- importing the
+  // module is not enough to surface it.
+  const strictFailures = [];
+  const $probeForm = jQuery('<form></form>').appendTo('body');
+  const $probe = jQuery('<input type="text" name="probe" value="12345678901">').appendTo($probeForm);
+  Object.keys(jQuery.formUtils.validators).forEach(function (name) {
+    const validator = jQuery.formUtils.validators[name];
+    if (validator.async) { return; }
+    try {
+      validator.validatorFunction('12345678901', $probe,
+        jQuery.formUtils.defaultConfig(), jQuery.formUtils.LANG, $probeForm, 'blur');
+    } catch (e) {
+      if (e instanceof ReferenceError) {
+        strictFailures.push(name + ': ' + e.message);
+      }
+    }
+  });
+  $probeForm.remove();
+  results.validatorsRun = Object.keys(jQuery.formUtils.validators).length;
+  results.strictModeFailures = strictFailures;
+  window.__esmResults = results;
+  document.getElementById('out').textContent = JSON.stringify(results, null, 2);
+</script>
+
+<script>
+  window.addEventListener('error', function (e) {
+    window.__esmError = e.message;
+    document.getElementById('out').textContent = 'ERROR: ' + e.message;
+  });
+</script>
+
+</body>
+</html>

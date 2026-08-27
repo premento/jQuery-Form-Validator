@@ -43,6 +43,18 @@
       badDate: 'Vous n\'avez pas saisi une date correcte',
       lengthBadStart: 'Votre saisie doit comporter entre ',
       lengthBadEnd: ' caractères',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'Votre saisie doit comporter entre {0} caractères',
+      lengthTooShort: 'Votre saisie est plus courte que {0} caractères',
+      lengthTooLong: 'Vous avez saisi une réponse qui est plus longue que {0} caractères',
+      groupCheckedRange: 'Choisissez entre {0} sélection(s)',
+      groupCheckedTooFew: 'Vous devez faire au moins {0} sélection(s)',
+      groupCheckedTooMany: 'Vous ne pouvez pas faire plus de {0} sélection(s)',
+      badNumberOfSelectedOptions: 'Vous devez sélectionner au moins {0} réponse(s)',
       lengthTooLongStart: 'Vous avez saisi une réponse qui est plus longue que ',
       lengthTooShortStart: 'Votre saisie est plus courte que ',
       notConfirmed: 'Les saisies ne sont pas identiques',

@@ -43,6 +43,18 @@
       badDate: 'La data scelta non &egrave; valida',
       lengthBadStart: 'La sua risposta non può essere più lunga di ',
       lengthBadEnd: ' caratteri',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'La sua risposta non può essere più lunga di {0} caratteri',
+      lengthTooShort: 'La lunghezza della risposta deve essere maggiore di {0} caratteri',
+      lengthTooLong: 'La lunghezza della risposta deve essere minore di {0} caratteri',
+      groupCheckedRange: 'Si prega di scegliere tra {0} opzione/i',
+      groupCheckedTooFew: 'Si prega di selezionare un minimo di {0} opzione/i',
+      groupCheckedTooMany: 'Si prega di selezionare un massimo di {0} opzione/i',
+      badNumberOfSelectedOptions: 'Deve selezionare almeno{0} risposta/e',
       lengthTooLongStart: 'La lunghezza della risposta deve essere minore di ',
       lengthTooShortStart: 'La lunghezza della risposta deve essere maggiore di ',
       notConfirmed: 'Il valore non è stato confermato.',

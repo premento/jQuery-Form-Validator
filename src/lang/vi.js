@@ -25,6 +25,18 @@
       badDate: 'Ngày tháng chưa chính xác',
       lengthBadStart: 'Yêu cầu nhập từ ',
       lengthBadEnd: ' ký tự',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'Yêu cầu nhập từ {0} ký tự',
+      lengthTooShort: 'Dữ liệu quá ngắn, yêu cầu nhiều hơn {0} ký tự',
+      lengthTooLong: 'Dữ liệu quá dài, yêu cầu ít hơn {0} ký tự',
+      groupCheckedRange: 'Vui lòng tích chọn từ {0} lựa chọn',
+      groupCheckedTooFew: 'Vui lòng tích chọn ít nhất {0} lựa chọn',
+      groupCheckedTooMany: 'Vui lòng tích chọn nhiều nhất {0} lựa chọn',
+      badNumberOfSelectedOptions: 'Bạn cần tích chọn ít nhất {0} lựa chọn',
       lengthTooLongStart: 'Dữ liệu quá dài, yêu cầu ít hơn ',
       lengthTooShortStart: 'Dữ liệu quá ngắn, yêu cầu nhiều hơn ',
       notConfirmed: 'Dữ liệu không được xác nhận',

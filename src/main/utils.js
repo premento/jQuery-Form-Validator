@@ -25,14 +25,19 @@
         validationErrorMsgAttribute: 'data-validation-error-msg', // define custom err msg inline with element
         errorMessagePosition: 'inline', // Can be either "top" or "inline"
         errorMessageTemplate: {
-          container: '<div class="{errorMessageClass} alert alert-danger">{messages}</div>',
+          container: '<div class="{errorMessageClass} alert alert-danger" role="alert">{messages}</div>',
           messages: '<strong>{errorTitle}</strong><ul>{fields}</ul>',
-          field: '<li>{msg}</li>'
+          // {id} is the id of the field the message belongs to, so the summary
+          // can be navigated by keyboard rather than only read.
+          field: '<li><a href="#{id}">{msg}</a></li>',
+          // Used when there is no input to link to.
+          fieldNoLink: '<li>{msg}</li>'
         },
         scrollToTopOnError: true,
+        focusOnError: true, // move focus to the error summary, or the first invalid input, on failed submit
         dateFormat: 'yyyy-mm-dd',
         addValidClassOnAll: false, // whether or not to apply class="valid" even if the input wasn't validated
-        decimalSeparator: '.',
+        decimalSeparator: '.', // or 'auto' to take it from the browser locale via Intl.NumberFormat
         inputParentClassOnError: 'has-error', // twitter-bootstrap default class name
         inputParentClassOnSuccess: 'has-success', // twitter-bootstrap default class name
         validateHiddenInputs: false, // whether or not hidden inputs should be validated
@@ -71,12 +76,158 @@
     addValidator: function (validator) {
       // prefix with "validate_" for backward compatibility reasons
       var name = validator.name.indexOf('validate_') === 0 ? validator.name : 'validate_' + validator.name;
-      if (validator.validateOnKeyUp === undefined) {
-        validator.validateOnKeyUp = true;
+      // validateOnKeyUp is the pre-3.0 name for this opt-out; honour it
+      // when a validator still sets it, and keep the two mirrored.
+      if (validator.validateOnInput === undefined) {
+        validator.validateOnInput = validator.validateOnKeyUp === undefined ?
+          true : validator.validateOnKeyUp;
       }
+      validator.validateOnKeyUp = validator.validateOnInput;
       this.validators[name] = validator;
     },
 
+    /**
+     * The locale used for Intl formatting: an explicit override, then the
+     * document language, then the browser.
+     *
+     * @return {String}
+     */
+    locale: function () {
+      return this._locale ||
+        (document.documentElement && document.documentElement.lang) ||
+        (window.navigator && (window.navigator.language || window.navigator.userLanguage)) ||
+        'en';
+    },
+
+    /**
+     * The decimal separator this locale writes numbers with.
+     *
+     * Not used unless config.decimalSeparator is set to 'auto'. Following
+     * the browser locale by default would be wrong for most sites: a form
+     * that posts to a server expecting '1.5' should not start accepting
+     * '1,5' because the visitor's browser is set to German. The site's
+     * locale is what matters and the library cannot know it, so this is
+     * offered rather than assumed.
+     *
+     * @return {String}
+     */
+    localeDecimalSeparator: function () {
+      var parts, i;
+
+      if (window.Intl && window.Intl.NumberFormat) {
+        try {
+          parts = new window.Intl.NumberFormat(this.locale()).formatToParts(1.1);
+          for (i = 0; i < parts.length; i++) {
+            if (parts[i].type === 'decimal') {
+              return parts[i].value;
+            }
+          }
+        } catch (ignored) {
+          // Unusable locale tag, or no formatToParts; fall through.
+        }
+      }
+
+      return '.';
+    },
+
+    /**
+     * Strip grouping characters from a formatted number.
+     *
+     * numberFormat sanitation is defined in numeral.js terms, so numeral is
+     * used when the page provides it. It is optional as of 3.0: without it,
+     * grouping is stripped well enough to validate a value this plugin's own
+     * sanitizer produced, rather than throwing.
+     *
+     * @param {String} value
+     * @return {String}
+     */
+    unformatNumber: function (value) {
+      if (window.numeral) {
+        return String(window.numeral().unformat(value));
+      }
+      return String(value).replace(/[^0-9.,+-]/g, '');
+    },
+    /**
+     * Pick a plural form for count.
+     *
+     * English gets away with "item(s)", most languages do not, and several
+     * have more than two forms. Intl.PluralRules knows the rules; the
+     * fallback is the English one.
+     *
+     * @param {Object} forms - keyed by CLDR plural category (one, other, ...)
+     * @param {Number} count
+     * @return {String}
+     */
+    selectPluralForm: function (forms, count) {
+      var category = 'other';
+
+      if (typeof count === 'number') {
+        category = count === 1 ? 'one' : 'other';
+        if (window.Intl && window.Intl.PluralRules) {
+          try {
+            category = new window.Intl.PluralRules(this.locale()).select(count);
+          } catch (ignored) {
+            // An unusable locale tag; the English fallback above stands.
+          }
+        }
+      }
+
+      return forms[category] !== undefined ? forms[category] : forms.other;
+    },
+
+    /**
+     * Substitute {0}, {1} ... into a message.
+     *
+     * Messages used to be assembled by concatenating a "start" fragment and
+     * an "end" fragment around a number, which pins every language to
+     * English word order. A whole-sentence template lets a translator put
+     * the number where their language needs it.
+     *
+     * @param {String|Object} template - a string, or plural forms keyed by category
+     * @param {Array} [params]
+     * @param {Number} [count] - selects the plural form
+     * @return {String}
+     */
+    formatMessage: function (template, params, count) {
+      var resolved = template;
+
+      if (resolved && typeof resolved === 'object') {
+        resolved = this.selectPluralForm(resolved, count);
+      }
+
+      if (typeof resolved !== 'string') {
+        return '';
+      }
+
+      params = params || [];
+
+      return resolved.replace(/\{(\d+)\}/g, function (match, index) {
+        var value = params[parseInt(index, 10)];
+        return value === undefined ? match : value;
+      });
+    },
+
+    /**
+     * Resolve a message that carries a number.
+     *
+     * Prefers a 3.0 template and falls back to the pre-3.0 start/end
+     * fragments, so a language file or a custom config that only knows the
+     * old keys keeps producing exactly what it did before.
+     *
+     * @param {Object} lang
+     * @param {String} templateKey
+     * @param {String} legacyStartKey
+     * @param {String} legacyEnd - already resolved, since some callers pick between two
+     * @param {String|Number} value - substituted for {0}
+     * @param {Number} [count] - selects the plural form
+     * @return {String}
+     */
+    resolveCountMessage: function (lang, templateKey, legacyStartKey, legacyEnd, value, count) {
+      if (lang[templateKey] !== undefined) {
+        return this.formatMessage(lang[templateKey], [value], count);
+      }
+      return (lang[legacyStartKey] || '') + value + (legacyEnd || '');
+    },
     /**
      * Function for adding a sanitizer
      * @param {Object} sanitizer
@@ -159,7 +310,8 @@
         })
         .trigger('beforeValidation', [value, language, conf]);
 
-      var inputIsOptional = $elem.valAttr('optional') === 'true',
+      var isLiveEdit = eventContext === 'input' || eventContext === 'keyup',
+          inputIsOptional = $elem.valAttr('optional') === 'true',
           skipBecauseItsEmpty = !value && inputIsOptional,
           validationRules = $elem.attr(conf.validationRuleAttribute),
           isValid = true,
@@ -203,14 +355,16 @@
             $elem = $form.find('[name="' + $elem.attr('name') + '"]:eq(0)');
           }
 
-          if (eventContext !== 'keyup' || validator.validateOnKeyUp) {
-            // A validator can prevent itself from getting triggered on keyup
+          // A validator can prevent itself from running while the user is
+          // still editing. "keyup" is still recognised so that anything
+          // triggering the pre-3.0 event context keeps working.
+          if (!isLiveEdit || validator.validateOnInput) {
             isValid = validator.validatorFunction(value, $elem, conf, language, $form, eventContext);
           }
 
           if (!isValid) {
             if (conf.validateOnBlur) {
-              $elem.validateOnKeyUp(language, conf);
+              $elem.validateOnInput(language, conf);
             }
             errorMsg = $.formUtils.dialogs.resolveErrorMessage($elem, validator, rule, conf, language);
             return false; // break iteration
@@ -302,20 +456,36 @@
       day = findDateUnit('d', formatParts, matches);
       year = findDateUnit('y', formatParts, matches);
 
-      if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1) {
+      // findDateUnit returns -1 for a unit the format does not carry. A
+      // format such as "mm/yyyy" is legitimate, so an absent unit must be
+      // skipped rather than treated as the invalid value zero.
+      var hasMonth = month !== -1,
+        hasDay = day !== -1;
+
+      if (year < 1) {
+        return false;
+      }
+      if (hasMonth && (month < 1 || month > 12)) {
+        return false;
+      }
+      if (hasDay && (day < 1 || day > 31)) {
         return false;
       }
 
-      if ((month === 2 && day > 28 && (year % 4 !== 0 || year % 100 === 0 && year % 400 !== 0)) ||
-        (month === 2 && day > 29 && (year % 4 === 0 || year % 100 !== 0 && year % 400 === 0)) ||
-        month > 12 || month === 0) {
-        return false;
-      }
-      if ((this.isShortMonth(month) && day > 30) || (!this.isShortMonth(month) && day > 31) || day === 0) {
-        return false;
+      // Day-in-month checks only mean anything when the format has both.
+      if (hasMonth && hasDay) {
+        if ((month === 2 && day > 28 && (year % 4 !== 0 || year % 100 === 0 && year % 400 !== 0)) ||
+          (month === 2 && day > 29 && (year % 4 === 0 || year % 100 !== 0 && year % 400 === 0))) {
+          return false;
+        }
+        if ((this.isShortMonth(month) && day > 30) || (!this.isShortMonth(month) && day > 31)) {
+          return false;
+        }
       }
 
-      return [year, month, day];
+      // Absent units come back as 1, so callers doing date arithmetic (the
+      // birthdate validator, for one) get a usable date.
+      return [year, hasMonth ? month : 1, hasDay ? day : 1];
     },
 
     /**
@@ -390,7 +560,8 @@
      */
     numericRangeCheck: function (value, rangeAllowed) {
       // split by dash
-      var range = $.split(rangeAllowed);
+      var range = $.split(rangeAllowed),
+        minmax;
 
       if( range.length === 1 && rangeAllowed.indexOf('min') === -1 && rangeAllowed.indexOf('max') === -1 ) {
         range = [rangeAllowed, rangeAllowed]; // only a number, checking agains an exact number of characters
@@ -402,14 +573,14 @@
       } // value is out of range
       else if (rangeAllowed.indexOf('min') === 0) // min
       {
-        var minmax = parseInt(rangeAllowed.substr(3), 10);
+        minmax = parseInt(rangeAllowed.substr(3), 10);
         if (value < minmax) {
           return ['min', minmax];
         }
       } // value is below min
       else if (rangeAllowed.indexOf('max') === 0) // max
       {
-        var minmax = parseInt(rangeAllowed.substr(3), 10);
+        minmax = parseInt(rangeAllowed.substr(3), 10);
         if (value > minmax) {
           return ['max', minmax];
         }
@@ -593,13 +764,14 @@
           var code = (e.keyCode ? e.keyCode : e.which),
             suggestionId,
             $suggestionContainer,
-            $input = $(this);
+            $input = $(this),
+            $suggestions;
 
           if (code === 13 && $.formUtils._selectedSuggestion !== null) {
             suggestionId = $input.valAttr('suggestion-nr');
             $suggestionContainer = $('.jquery-form-suggestion-' + suggestionId);
             if ($suggestionContainer.length > 0 && $.formUtils._selectedSuggestion !== null) {
-              var $suggestions = $suggestionContainer.find('div');
+              $suggestions = $suggestionContainer.find('div');
               if ($.formUtils._selectedSuggestion >= 0 && $.formUtils._selectedSuggestion < $suggestions.length) {
                 var newText = $suggestions.eq($.formUtils._selectedSuggestion).text();
                 $input.val(newText);
@@ -612,7 +784,7 @@
           else {
             suggestionId = $input.valAttr('suggestion-nr');
             $suggestionContainer = $('.jquery-form-suggestion-' + suggestionId);
-            var $suggestions = $suggestionContainer.children();
+            $suggestions = $suggestionContainer.children();
             if ($suggestions.length > 0 && $.inArray(code, [38, 40]) > -1) {
               if (code === 38) { // key up
                 if ($.formUtils._selectedSuggestion === null) {
@@ -683,6 +855,34 @@
       badDate: 'You have not given a correct date',
       lengthBadStart: 'The input value must be between ',
       lengthBadEnd: ' characters',
+
+      // 3.0 message templates. Whole sentences with a {0} placeholder, so a
+      // translator can place the number where their language needs it, and
+      // plural forms where a count decides the wording. The fragment keys
+      // above are kept: a language file or config that only sets those still
+      // renders exactly as it did in 2.x.
+      lengthBadRange: 'The input value must be between {0} characters',
+      lengthTooShort: {
+        one: 'The input value is shorter than {0} character',
+        other: 'The input value is shorter than {0} characters'
+      },
+      lengthTooLong: {
+        one: 'The input value is longer than {0} character',
+        other: 'The input value is longer than {0} characters'
+      },
+      groupCheckedRange: 'Please choose between {0} items',
+      groupCheckedTooFew: {
+        one: 'Please choose at least {0} item',
+        other: 'Please choose at least {0} items'
+      },
+      groupCheckedTooMany: {
+        one: 'Please choose a maximum of {0} item',
+        other: 'Please choose a maximum of {0} items'
+      },
+      badNumberOfSelectedOptions: {
+        one: 'You have to choose at least {0} answer',
+        other: 'You have to choose at least {0} answers'
+      },
       lengthTooLongStart: 'The input value is longer than ',
       lengthTooShortStart: 'The input value is shorter than ',
       notConfirmed: 'Input values could not be confirmed',
@@ -696,6 +896,7 @@
       badUKNin: 'Incorrect UK NIN',
       badUKUtr: 'Incorrect UK UTR Number',
       badStrength: 'The password isn\'t strong enough',
+      badBreachedPassword: 'This password has appeared in a known data breach. Please choose a different one.',
       badNumberOfSelectedOptionsStart: 'You have to choose at least ',
       badNumberOfSelectedOptionsEnd: ' answers',
       badAlphaNumeric: 'The input value can only contain alphanumeric characters ',

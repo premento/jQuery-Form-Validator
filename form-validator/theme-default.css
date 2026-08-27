@@ -45,7 +45,7 @@ input[type="file"].valid {
 /* Element showing an inline error message */
 .form-error {
     display: block;
-    color: #b94a48;
+    color: #843534;
     margin-top: 5px;
     margin-bottom: 10px;
     line-height: 140%;
@@ -99,7 +99,7 @@ div.form-error strong {
 div.form-error strong,
 div.form-error ul li {
     line-height: 140%;
-    color: #b94a48;
+    color: #843534;
     font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
     font-size: 14px;
 }
@@ -107,4 +107,69 @@ div.form-error ul li {
 div.form-error ul,
 div.form-error ul li {
     background: none;
+}
+
+/* ------------------------------------------------------------------
+ * Accessibility
+ * ------------------------------------------------------------------ */
+
+/* The inline error message is associated with its field via
+ * aria-describedby. Give it a marker so the error is not signalled by
+ * colour alone (WCAG 2.2 SC 1.4.1). */
+.form-error:not(.alert)::before {
+    content: "\26A0";
+    speak: never;
+    margin-right: 5px;
+    font-weight: bold;
+}
+
+/* The error summary receives focus on a failed submit. It carries
+ * tabindex="-1", so show a focus ring for sighted keyboard users but only
+ * when the browser judges one warranted. */
+div.form-error.alert:focus {
+    outline: none;
+}
+
+div.form-error.alert:focus-visible {
+    outline: 2px solid #b94a48;
+    outline-offset: 2px;
+}
+
+/* Entries in the error summary link to the field they describe. */
+div.form-error ul li a {
+    color: inherit;
+    display: inline-block;
+    min-height: 24px;
+    line-height: 24px;
+}
+
+div.form-error ul li a:hover,
+div.form-error ul li a:focus {
+    text-decoration: none;
+}
+
+/* Progressive enhancement: browsers style the field themselves once the
+ * user has actually interacted with it, so a pristine form never turns red
+ * on load. Baseline across Chrome, Edge, Firefox and Safari since Nov 2023.
+ * Applies only to fields this plugin has not already classed. */
+select:not(.error):not(.valid):user-invalid,
+input:not(.error):not(.valid):user-invalid,
+textarea:not(.error):not(.valid):user-invalid {
+    border-color: #b94a48;
+}
+
+select:not(.error):not(.valid):user-valid,
+input:not(.error):not(.valid):user-valid,
+textarea:not(.error):not(.valid):user-valid {
+    border-color: #468847;
+}
+
+/* Honour the OS-level request to minimise animation. */
+@media (prefers-reduced-motion: reduce) {
+    .form-error,
+    .help,
+    .help-block {
+        transition: none !important;
+        animation: none !important;
+    }
 }

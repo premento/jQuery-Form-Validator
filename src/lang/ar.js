@@ -26,6 +26,18 @@
       badDate: 'تاريخ مدخل خاطئ',
       lengthBadStart: 'القيمة المدخلة يجب أن تكون بين ',
       lengthBadEnd: ' حروف',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'القيمة المدخلة يجب أن تكون بين {0} حروف',
+      lengthTooShort: 'القيمة المدخل أقصر من {0} حروف',
+      lengthTooLong: 'القيمة المدخل أطول من {0} حروف',
+      groupCheckedRange: 'من فضلك اختر بين {0} مرات',
+      groupCheckedTooFew: 'من فضلك اختر على الأقل {0} مرات',
+      groupCheckedTooMany: 'من فضلك اختر بحد أقصى {0} مرات',
+      badNumberOfSelectedOptions: 'يجب اختيار على الأقل {0} أجوبة',
       lengthTooLongStart: 'القيمة المدخل أطول من ',
       lengthTooShortStart: 'القيمة المدخل أقصر من ',
       notConfirmed: 'لم يتم تأكيد القيمة المدخلة',

@@ -27,6 +27,18 @@
       badDate: 'Вы задали некорректную дату',
       lengthBadStart: 'Значение должно быть в диапазоне',
       lengthBadEnd: ' символов',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'Значение должно быть в диапазоне{0} символов',
+      lengthTooShort: 'Значение меньше, чем {0} символов',
+      lengthTooLong: 'Значение длинее, чем {0} символов',
+      groupCheckedRange: 'Выберите между {0} элемент(ов)',
+      groupCheckedTooFew: 'Выберите как минимум {0} элемент(ов)',
+      groupCheckedTooMany: 'Выберите максимум из {0} элемент(ов)',
+      badNumberOfSelectedOptions: 'Вы должны выбрать как минимум {0} ответов',
       lengthTooLongStart: 'Значение длинее, чем ',
       lengthTooShortStart: 'Значение меньше, чем ',
       notConfirmed: 'Введённые значения не могут быть подтверждены',

@@ -165,10 +165,8 @@
           }
 
           $input.valAttr('is-escaped', 'yes');
-          $input.one('keyup', function(evt) {
-            if(evt.keyCode !== 9) {
-              $input.valAttr('is-escaped', 'no');
-            }
+          $input.one('input', function() {
+            $input.valAttr('is-escaped', 'no');
           });
 
           $.each(entities, function(symbol, replacement) {
@@ -179,6 +177,52 @@
     }
   });
 
+  /**
+   * Format a number using Intl.NumberFormat.
+   *
+   * The modern counterpart to numberFormat, which needs numeral.js and its
+   * own pattern syntax. Options are given as JSON and passed straight to
+   * Intl.NumberFormat, so the whole API is available:
+   *
+   *   data-sanitize="localeNumberFormat"
+   *   data-sanitize-locale="de-DE"
+   *   data-sanitize-number-options='{"minimumFractionDigits":2}'
+   *
+   * The locale falls back to the document or browser locale.
+   */
+  $.formUtils.addSanitizer({
+    name: 'localeNumberFormat',
+    sanitizerFunction: function (val, $input) {
+      var raw = $.formUtils.unformatNumber(val),
+        number = parseFloat(raw),
+        locale = $input.attr('data-sanitize-locale') || $.formUtils.locale(),
+        rawOptions = $input.attr('data-sanitize-number-options'),
+        options = {};
+
+      if (val === '' || isNaN(number)) {
+        return val;
+      }
+
+      if (rawOptions) {
+        try {
+          options = JSON.parse(rawOptions);
+        } catch (ignored) {
+          $.formUtils.warn('data-sanitize-number-options is not valid JSON; ignoring it.');
+        }
+      }
+
+      if (!window.Intl || !window.Intl.NumberFormat) {
+        return val;
+      }
+
+      try {
+        return new window.Intl.NumberFormat(locale, options).format(number);
+      } catch (ignored) {
+        $.formUtils.warn('Could not format a number for locale "' + locale + '".');
+        return val;
+      }
+    }
+  });
   $.formUtils.registerLoadedModule('sanitize');
 
   var inputsThatCantBeSanitized = '[type="button"], [type="submit"], [type="radio"], [type="checkbox"], [type="reset"], [type="search"]',
@@ -208,7 +252,7 @@
           });
           $input
             .val(value)
-            .trigger('keyup.validation'); // we need to re-validate in case it gets validated on blur
+            .trigger('input.validation'); // we need to re-validate in case it gets validated on blur
         };
 
         $forms.each(function() {

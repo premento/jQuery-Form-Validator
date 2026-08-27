@@ -6,7 +6,7 @@ I started writing this plugin back in 2009 and it has given me much joy over the
 
 **This plugin is no longer being developed!** It supports jQuery v. 1.8 >= 2.2.4. No pull requests will become merged in but feel free to fork and do whatever you like!
 
-[![Travis](https://travis-ci.org/victorjonsson/jQuery-Form-Validator.svg)](https://travis-ci.org/victorjonsson/jQuery-Form-Validator/builds/)
+<!-- Travis was retired in 3.0; CI runs in GitHub Actions (.github/workflows/ci.yml). -->
 
 [![npm version](https://badge.fury.io/js/jquery-form-validator.svg)](https://www.npmjs.com/package/jquery-form-validator)
 
@@ -39,6 +39,278 @@ I started writing this plugin back in 2009 and it has given me much joy over the
 </script>
 ```
 
+## What's new in 3.0
+
+### Installing and importing
+
+```
+npm install jquery-form-validator
+```
+
+The package ships an ES module build, a UMD build and TypeScript declarations.
+
+**As ES modules** — import the modules you need instead of naming them in the `modules` option. Each import registers its validators, so nothing is fetched at runtime and the page works under a strict Content-Security-Policy:
+
+```js
+import $ from 'jquery';
+import 'jquery-form-validator';
+import 'jquery-form-validator/modules/security';
+import 'jquery-form-validator/lang/sv';
+import 'jquery-form-validator/css';
+
+$.validate({
+    modules: 'security',   // already registered, so no network request
+    lang: 'sv'
+});
+```
+
+Naming a module in `modules` that has not been imported still falls back to fetching it at runtime, which is what a plain `<script>` page relies on.
+
+**As a script tag** — unchanged from 2.x:
+
+```html
+<script src="node_modules/jquery-form-validator/dist/jquery.form-validator.min.js"></script>
+```
+
+**TypeScript** — declarations are bundled and require `@types/jquery`:
+
+```
+npm install --save-dev @types/jquery
+```
+
+### Package layout
+
+| Path | Contents |
+| ---- | -------- |
+| `dist/` | UMD build. Canonical location as of 3.0. |
+| `dist/esm/` | ES module build (`.mjs`). |
+| `types/` | TypeScript declarations. |
+| `form-validator/` | The 2.x output path, kept in step for one major version so existing CDN links keep resolving. Prefer `dist/`. |
+
+Subpath exports: `jquery-form-validator`, `jquery-form-validator/modules/<name>`, `jquery-form-validator/lang/<code>`, `jquery-form-validator/css` and `jquery-form-validator/css/min`.
+
+> **Note on tree-shaking.** This package declares `sideEffects: true`, and that is deliberate. Every file exists to register validators when it loads; nothing is exported. Marking the package side-effect free lets a bundler drop the very imports that do the work — in testing it reduced a real bundle from 304 kB to 38 bytes.
+
+### Accessibility
+
+Validation errors are now reported to assistive technology, not just styled:
+
+ * Failing fields get `aria-invalid="true"`, in both `inline` and `top` error modes.
+ * Inline messages are given an id and linked from the field with `aria-describedby`, so a screen reader reads the message when the field is focused. Any `aria-describedby` you set yourself is preserved — the plugin appends its own token and removes only that one.
+ * Inline messages are `aria-live="polite"`, so an error appearing on blur is announced without interrupting typing.
+ * The error summary (`errorMessagePosition: 'top'`) is a `role="alert"` and each entry links to the field it describes.
+ * On a failed submit, focus moves to the error summary or to the first invalid field. Previously only the scrollbar moved, which left keyboard and screen reader users behind.
+ * Help text fades are skipped when the visitor has asked for reduced motion.
+
+The bundled theme was also corrected: error text is now `#843534`, which clears the WCAG AA 4.5:1 contrast threshold against the summary background (the previous `#b94a48` gave only 3.93:1), and summary links meet the 24×24px target size in WCAG 2.2.
+
+### Validation now follows the value, not the keyboard
+
+Live re-validation is bound to the `input` event instead of `keyup`. `keyup` never fires for paste, autofill, drag-and-drop, speech input or IME composition, so a field corrected by any of those stayed marked invalid until the next keystroke.
+
+`$.fn.validateOnKeyUp` and `$.fn.removeKeyUpValidation` still work but are deprecated; use `$.fn.validateOnInput` and `$.fn.removeInputValidation`. A validator that opted out with `validateOnKeyUp: false` is still honoured, but the option is now called `validateOnInput`.
+
+### Constraint Validation API bridge — module `native`
+
+```js
+$.validate({
+    modules: 'native'
+});
+```
+
+Loading the `native` module keeps the browser and the plugin in agreement about every field:
+
+ * Each validation result is mirrored onto the element with `setCustomValidity()`, so `element.validity`, `form.checkValidity()` and the `:invalid` / `:user-invalid` CSS pseudo-classes all reflect your `data-validation` rules. Without it the browser considers a field valid while the plugin is showing an error on it.
+ * `data-validation="native"` hands a field's constraints to the browser: `required`, `type="email"`, `type="url"`, `min`, `max`, `step`, `pattern`, `minlength` and `maxlength` are answered by `ValidityState` rather than by a regular expression. Messages still come from your configured language, falling back to the browser's own localised text.
+
+To have the html5 module emit `native` instead of translating attributes into the plugin's own validators, add `preferNativeValidation: true`. This is off by default, so existing forms are unaffected.
+
+### Async validation
+
+Server-side checks no longer disable the field while a request is in flight. Disabling steals focus, drops the control out of the tab order, hides it from assistive technology, and omits it from form submission entirely. The field is now marked `aria-busy="true"` and keeps the `async-validation` class, so existing styling continues to work.
+
+Checks are also debounced. A user who edits and leaves a field several times in quick succession now produces one request carrying the value they finished on, rather than one request per pass:
+
+```html
+<input name="username"
+       data-validation="server"
+       data-validation-debounce="500">
+```
+
+The default is 500ms. Set `data-validation-debounce="0"` to call out immediately. **Submitting is never debounced** — the user has already committed, so the request goes out at once no matter what the attribute says. The form stays halted for the whole window, so nothing can be submitted past a check that has not run yet.
+
+### Customising the error summary
+
+`errorMessageTemplate` was documented in 2.x but never actually read; the summary markup was hardcoded. It now works, and any subset of its keys may be overridden — whatever you leave out falls back to the default:
+
+```js
+$.validate({
+    errorMessagePosition: 'top',
+    errorMessageTemplate: {
+        container: '<section class="{errorMessageClass}" role="alert">{messages}</section>',
+        messages: '<h2>{errorTitle}</h2><ol>{fields}</ol>',
+        field: '<li><a href="#{id}">{msg}</a></li>',
+        fieldNoLink: '<li>{msg}</li>'
+    }
+});
+```
+
+| Placeholder | Available in | Meaning |
+| ----------- | ------------ | ------- |
+| `{errorMessageClass}` | `container` | The configured `errorMessageClass`. |
+| `{messages}` | `container` | The rendered `messages` template. |
+| `{errorTitle}` | `messages` | The `errorTitle` language string. |
+| `{fields}` | `messages` | The rendered `field` templates, concatenated. |
+| `{msg}` | `field`, `fieldNoLink` | The validation message. |
+| `{id}` | `field` | The id of the field the message belongs to, generated if the field has none. |
+
+`fieldNoLink` is used when there is no input to link to. Substitution is single-pass, so a validation message that happens to contain something like `{fields}` is inserted literally rather than treated as a placeholder.
+
+### Passwords
+
+> **Breaking.** `data-validation="strength"` scores passwords differently in 3.0. Values that passed before may now be rejected, and vice versa. The attribute, the 0–3 scale and the thresholds are unchanged — only the scoring is. Re-check any form that relies on a particular `data-validation-strength` level.
+
+The previous scoring awarded points for composition: mixed case, digits, symbols. NIST SP 800-63B rev 4 (finalised July 2025) retired composition rules, because they push people toward short predictable passwords. The old algorithm demonstrated the problem: `P@ss1!` scored 3 of 3, while a sixteen-character lowercase password scored 2.
+
+Scoring is now length-driven, and only counts length an attacker actually has to guess:
+
+| Password | Old score | New score |
+| -------- | --------- | --------- |
+| `P@ss1!` | 3 | 0 |
+| `Tr0ub4dor&3` | 3 | 1 |
+| `abcdefghijklmnop` | 2 | 0 |
+| `aaaaaaaaaaaaaaaaaaaa` | 0 | 0 |
+| `thequickbrownfox` | 2 | 3 |
+| `correcthorsebatterystaple` | 3 | 3 |
+
+Runs (`aaaa`) and sequences (`abcd`, `9876`) are discounted from the third character onward, and a short list of passwords that dominate every breach corpus scores 0 regardless of length — `Password1!` and `letmein123` included. Thresholds follow rev 4: 8 effective characters is the floor for an account with a second factor, 15 for one without.
+
+`data-validation="complexity"` still works but is deprecated, and logs a warning. It enforces exactly the composition rules rev 4 retired. It is kept for sites working to a policy they do not control.
+
+A password field with a `maxlength` below 64 now logs an advisory. Rev 4 asks that at least 64 characters be accepted and that longer values are never silently truncated. Nothing is overridden — the limit may not be yours to change.
+
+#### Screening against known breaches
+
+```html
+<input type="password" name="password" data-validation="strength breached">
+```
+
+`data-validation="breached"` checks the value against [Have I Been Pwned](https://haveibeenpwned.com/API/v3#PwnedPasswords). It is **opt-in and it talks to the network**: every check makes an HTTPS request.
+
+The password itself never leaves the browser. Only the first five hex characters of its SHA-1 are sent; the service returns every suffix sharing that prefix and the match is made locally — the k-anonymity model the API is built around. In practice the request looks like `GET https://api.pwnedpasswords.com/range/5BAA6` and nothing else.
+
+Notes:
+
+ * It needs `crypto.subtle` and `fetch`, so it only runs in a secure context (https, or localhost). Elsewhere it logs a warning and passes the value.
+ * It **fails open**. If the service cannot be reached the value is allowed and a warning is logged, because an outage of a third-party service should not become an outage of your form. Your other password rules still apply.
+ * It is an async validator, so it is debounced like any other — see [Async validation](#async-validation). Set `data-validation-debounce` to tune it.
+ * Point `data-validation-breach-url` at your own endpoint to use a self-hosted range API instead.
+
+### Messages and localisation
+
+Messages that carry a number used to be assembled by concatenating two fragments around it:
+
+```js
+lengthTooShortStart: 'The input value is shorter than ',
+lengthBadEnd: ' characters'
+```
+
+That pins every language to English word order and cannot express plural forms. 3.0 adds whole-sentence templates with a `{0}` placeholder, and plural forms where a count decides the wording:
+
+```js
+lengthTooShort: {
+    one: 'The input value is shorter than {0} character',
+    other: 'The input value is shorter than {0} characters'
+}
+```
+
+Plural category selection uses `Intl.PluralRules`, so languages with more than two forms are handled properly rather than being forced into `item(s)`.
+
+**Nothing breaks.** The old fragment keys are still present in every bundled language and are still honoured: if a template is absent, the fragments are concatenated exactly as before. A `language` override that only sets the old keys keeps working unchanged.
+
+All 20 bundled languages now carry templates, composed mechanically from the fragments they already contained, so today's output is byte-identical. They are flat strings rather than plural objects — a trailing fragment such as `' tecken'` does not reveal what the singular should be. Translators can now reorder the sentence, and add plural forms where their language needs them:
+
+```js
+$.validate({
+    language: {
+        groupCheckedTooFew: {
+            one: 'Choose at least {0} option',
+            few: 'Choose at least {0} options',
+            other: 'Choose at least {0} options'
+        }
+    }
+});
+```
+
+Helpers are available directly: `$.formUtils.formatMessage(template, params, count)`, `$.formUtils.selectPluralForm(forms, count)` and `$.formUtils.locale()`.
+
+### Numbers
+
+`decimalSeparator` gains an `'auto'` setting that takes the separator from the browser locale via `Intl.NumberFormat`:
+
+```js
+$.validate({ decimalSeparator: 'auto' });
+```
+
+It is **opt-in, and the default is still `'.'`** — deliberately. A form that posts to a server expecting `1.5` should not silently start accepting `1,5` because a visitor's browser is set to German. What matters is the site's locale, which the library cannot know.
+
+A new `localeNumberFormat` sanitizer formats through `Intl.NumberFormat`, with no third-party dependency:
+
+```html
+<input data-sanitize="localeNumberFormat"
+       data-sanitize-locale="de-DE"
+       data-sanitize-number-options='{"minimumFractionDigits":2}'>
+```
+
+The existing `numberFormat` sanitizer still uses [numeral.js](http://numeraljs.com/) and its pattern syntax, and is unchanged. numeral is now genuinely optional: validating a `numberFormat` field without it on the page used to throw `ReferenceError`, and now degrades to stripping grouping characters.
+
+### Build and CI
+
+ * Travis (pinned to Node 4.2.4, and long dead for open source) is replaced by GitHub Actions, testing Node 20 and 22 against jQuery 1.12.4, 2.2.4, 3.7.1 and 4.0.0, plus a job running `publint` and `attw` on the package.
+ * JSHint is replaced by ESLint with a flat config. The old `onevar` rule, which required a single `var` statement per function, is gone — no code in this project was written that way.
+ * `grunt test` no longer depends on a browser path hardcoded to one machine; set `CHROME_BIN` or let puppeteer resolve its own.
+
+### New configuration options
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `focusOnError` | `true` | Move focus to the error summary, or the first invalid input, on a failed submit. |
+| `novalidate` | `true` | Add `novalidate` to the form so the browser does not raise its own error bubbles over the plugin's messages. A `novalidate` attribute you wrote yourself is never removed. |
+| `preferNativeValidation` | `false` | With the `native` module loaded, let the browser answer `type`/`min`/`max`/`step`/`pattern` instead of translating them. |
+| `observeDynamicFields` | `false` | Watch the form with a `MutationObserver` and wire up fields added after `$.validate()` ran, instead of requiring `$.validate()` to be called again. |
+| `errorMessageTemplate` | see above | Markup used to build the error summary. Documented since 2.x but only actually honoured from 3.0. |
+| `decimalSeparator` | `'.'` | Set to `'auto'` to take it from the browser locale via `Intl.NumberFormat`. |
+
+### Fixed
+
+Five validators regressed in 2.3.79 and are corrected here. Each had a failing test in the suite that was never green.
+
+ * **Internationalised domains were rejected.** The top level domain was required to be entirely alphanumeric, which turns away every IDN A-label, since those contain hyphens — `test.xn--fiqz9s` (.中国) among them. TLDs that genuinely start or end with a hyphen are still rejected. This also fixes URL validation, which delegates to the domain validator.
+
+ * **The CVV validator never learned the card type.** The credit card validator works out whether the form accepts American Express, which decides whether a CVV is three digits or four. That was being written to the card element and read from the CVV element, so it never arrived, and an amex-only form rejected valid four digit codes. It now lives on the form, which both fields can see — and still cannot leak between two forms on one page, which is what moving it off module scope was meant to prevent.
+
+ * **`1.0236` was accepted as an integer.** With `decimal-separator` set to `,`, a dot can only be a thousands separator, and every dot was being stripped unconditionally — turning a dot used as a decimal point into `10236`. Dots must now fall on a group boundary, so `1.234.567,89` is accepted and `1.0236` is not.
+
+ * **A date format without a day was always invalid.** `mm/yyyy` is a legitimate format, but an absent unit was reported as `-1` and then treated as an invalid zero. Absent units are now skipped, and come back as `1` so date arithmetic still works.
+
+ * **A malformed quoted address was expected to validate.** `"sasas-sdsd"sdfsdf.sdff@monkey.com` is not a valid address: RFC 5322 gives `obs-local-part = word *("." word)`, and a quoted string followed straight by more text with no dot between them is not a valid word sequence. The validator was right to reject it; the test expectation was wrong and has been corrected. Fully quoted local parts such as `"sasas-sdsd"@monkey.com` are still accepted.
+
+### Deprecated
+
+ * `data-validation="complexity"` — enforces composition rules NIST SP 800-63B rev 4 retired. Use `strength`, ideally with `breached`.
+ * `$.fn.validateOnKeyUp` and `$.fn.removeKeyUpValidation` — use `validateOnInput` and `removeInputValidation`.
+ * A validator opting out with `validateOnKeyUp: false` is still honoured; the option is now `validateOnInput`.
+
+### Removed
+
+ * The `placeholder` and `datalist` shims for pre-HTML5 browsers have been dropped from the html5 module. Every supported browser implements both natively.
+ * The IE7 `onreadystatechange` branch and the runtime script-injection fallback in the module loader have been reworked: modules already registered by an `import` no longer trigger a network request, and `lang/sv` and `lang/sv.js` now resolve to the same module.
+
+### Note on module and rule names
+
+`$.split` treats `-` as a delimiter, so a module or rule name containing a hyphen is read as two separate names. This is why the Constraint Validation module is called `native` and not `constraint-api`.
+
+
 ### Support for HTML5
 
 This plugin can serve as a fallback solution for the validation attributes in the HTML5 spec. With the html5 module you can use the following native features:
@@ -47,7 +319,7 @@ This plugin can serve as a fallback solution for the validation attributes in th
 
 **Input types**: url, date, time, email, number
 
-**Elements**: Use the element `datalist` to create input suggestions
+**Elements**: `datalist` is used by the browser directly; the shim for browsers without it was removed in 3.0.
 
 
 ### Default validators and features (no module needed)
@@ -77,7 +349,9 @@ Read the documentation for the default features at [#default-validators](#defaul
  * **confirmation**
  * **creditcard**
  * **CVV**
- * **strength** — *Validate the strength of a password*
+ * **strength** — *Validate the strength of a password (rescored in 3.0, see [Passwords](#passwords))*
+ * **breached** — *Check a password against Have I Been Pwned. Opt-in; makes a network request*
+ * **complexity** — *Deprecated in 3.0. Enforces composition rules NIST retired*
  * **server** — *Validate value of input on server side*
  * **letternumeric** — *Validate that the input value consists out of only letters and/or numbers*
  * **recaptcha** - *Validate Google [reCaptcha 2](https://www.google.com/recaptcha/intro/index.html)*
@@ -515,7 +789,9 @@ This validator can be used to validate that the values of two inputs are the sam
 
 ### Password strength
 
-Use this validator to make sure that your user has a strong enough password. Set attribute <code>data-validation-strength</code> to 1, 2 or 3 depending on how strong password you require.
+Use this validator to make sure that your user has a strong enough password. Set attribute <code>data-validation-strength</code> to 1, 2 or 3 depending on how strong a password you require.
+
+**The scoring changed in 3.0** and is now length-driven rather than composition-driven — see [Passwords](#passwords) for what moved and why. Consider pairing it with <code>data-validation="breached"</code>.
 
 If you want the strength of the password to be displayed while the user types you call <code>displayPasswordStrength()</code> in the end of the form.
 

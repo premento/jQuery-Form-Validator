@@ -1,0 +1,163 @@
+/**
+ * jQuery Form Validator Module: native
+ * ------------------------------------------
+ * Bridges this plugin and the HTML5 Constraint Validation API in both
+ * directions:
+ *
+ *  1. Mirrors every validation result onto the element with
+ *     setCustomValidity(), so that element.validity, form.checkValidity() and
+ *     the :user-invalid / :user-valid CSS pseudo-classes all agree with the
+ *     rules declared in data-validation. Without this the browser and the
+ *     plugin hold two separate, contradictory opinions about the same field.
+ *
+ *  2. Exposes the browser's own ValidityState as a validator
+ *     (data-validation="native"), so that type="email", min/max/step and
+ *     pattern can be answered by the browser rather than by a hand written
+ *     regular expression.
+ *
+ * @website http://formvalidator.net/
+ * @license MIT
+ */
+(function ($) {
+
+  'use strict';
+
+  // Named without a dash on purpose: $.split treats '-' as a delimiter, so a
+  // module called 'constraint-api' would be requested as two separate files.
+  $.formUtils.registerLoadedModule('native');
+
+  /**
+   * Whether the element participates in constraint validation at all.
+   * Fieldsets, outputs, buttons and disabled controls do not.
+   *
+   * @param {HTMLElement} el
+   * @return {Boolean}
+   */
+  var supportsConstraintApi = function (el) {
+      return !!el &&
+        typeof el.setCustomValidity === 'function' &&
+        typeof el.willValidate === 'boolean';
+    },
+
+    /**
+     * Turn a failed ValidityState into a message.
+     *
+     * Prefers this plugin's own language strings, so the message matches the
+     * rest of the form in whichever language it was configured with, and falls
+     * back to the browser's validationMessage, which the browser has already
+     * localised for the user.
+     *
+     * @param {ValidityState} validity
+     * @param {jQuery} $el
+     * @param {Object} language
+     * @param {HTMLElement} el
+     * @return {String}
+     */
+    resolveNativeMessage = function (validity, $el, language, el) {
+      var type = ($el.attr('type') || '').toLowerCase();
+
+      if (validity.valueMissing) {
+        return language.requiredField;
+      }
+      if (validity.typeMismatch) {
+        if (type === 'email') {
+          return language.badEmail;
+        }
+        if (type === 'url') {
+          return language.badUrl;
+        }
+      }
+      if (validity.patternMismatch) {
+        return language.badCustomVal;
+      }
+      if (validity.badInput || validity.stepMismatch ||
+          validity.rangeOverflow || validity.rangeUnderflow) {
+        return language.badInt;
+      }
+
+      return el.validationMessage;
+    },
+
+    /**
+     * Copy a validation result onto the element itself.
+     *
+     * @param {jQuery.Event} evt
+     * @param {Object} result
+     */
+    mirrorResult = function (evt, result) {
+      var el = this;
+
+      if (!supportsConstraintApi(el) || !result) {
+        return;
+      }
+
+      // A field the plugin decided not to judge -- hidden, disabled, optional
+      // and empty, or waiting on an async validator -- gets no claim either way.
+      if (result.shouldChangeDisplay === false) {
+        return;
+      }
+
+      el.setCustomValidity(result.isValid ? '' : (result.errorMsg || ''));
+    },
+
+    /**
+     * Drop every mirrored message when the form is reset.
+     *
+     * @param {jQuery.Event} evt
+     */
+    clearOnReset = function (evt) {
+      $(evt.target).find('[data-validation]').each(function () {
+        if (supportsConstraintApi(this)) {
+          this.setCustomValidity('');
+        }
+      });
+    };
+
+  /**
+   * Ask the browser whether the value satisfies the constraints expressed in
+   * the markup (type, min, max, step, pattern, required, minlength, maxlength).
+   */
+  $.formUtils.addValidator({
+    name: 'native',
+    validatorFunction: function (val, $el, conf, language) {
+      var el = $el.get(0),
+        validity;
+
+      if (!supportsConstraintApi(el) || !el.willValidate) {
+        // Nothing to ask -- treat as valid and let the other rules decide.
+        return true;
+      }
+
+      // Our own mirrored message sets customError, which would otherwise mask
+      // whatever the browser actually thinks of the value.
+      if (el.validity.customError) {
+        el.setCustomValidity('');
+      }
+
+      validity = el.validity;
+
+      if (validity.valid) {
+        return true;
+      }
+
+      this.errorMessage = resolveNativeMessage(validity, $el, language, el);
+      return false;
+    },
+    errorMessage: '',
+    errorMessageKey: ''
+  });
+
+  $.formUtils.$win.bind('validatorsLoaded formValidationSetup', function (evt, $form) {
+    if (!$form) {
+      $form = $('form');
+    }
+
+    // Delegated, so fields added to the form later are covered too.
+    $form
+      .unbind('afterValidation.constraintApi')
+      .on('afterValidation.constraintApi', '[data-validation]', mirrorResult)
+      .unbind('reset.constraintApi')
+      .bind('reset.constraintApi', clearOnReset);
+  });
+
+})(jQuery);

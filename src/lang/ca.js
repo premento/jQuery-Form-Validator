@@ -26,6 +26,18 @@
       badDate: 'La data proporcionada no és vàlida',
       lengthBadStart: 'La seva resposta s\'ha d\'incloure entre ',
       lengthBadEnd: ' caràcters',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'La seva resposta s\'ha d\'incloure entre {0} caràcters',
+      lengthTooShort: 'La seva resposta ha de ser major a {0} caràcters',
+      lengthTooLong: 'La seva resposta ha de ser menor a {0} caràcters',
+      groupCheckedRange: 'Si us plau, triï entre {0} element(s)',
+      groupCheckedTooFew: 'Si us plau, triï almenys {0} element(s)',
+      groupCheckedTooMany: 'Si us plau, triï un màxim de {0} element(s)',
+      badNumberOfSelectedOptions: 'Ha de seleccionar almenys{0} resposta(es)',
       lengthTooLongStart: 'La seva resposta ha de ser menor a ',
       lengthTooShortStart: 'La seva resposta ha de ser major a ',
       notConfirmed: 'Els valors proporcionats no poden ser confirmats',

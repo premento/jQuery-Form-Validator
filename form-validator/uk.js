@@ -71,14 +71,6 @@
     		total += VATsplit[i]* (8-i);  // sum weighted cumulative total
     	}
 
-    	var c = 0;
-    	var j = 0;
-
-    	for (var m = 8; m >= 2; m--) {
-    		c += VATsplit[j] * m;
-    		j++;
-    	}
-
     	// Traditional Algorithm for VAT numbers issued before 2010
 
     	while (total > 0) {

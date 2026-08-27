@@ -26,6 +26,18 @@
       badDate: 'Dară incorectă',
       lengthBadStart: 'Valoarea introdusă trebuie să fie interval ',
       lengthBadEnd: ' caractere',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'Valoarea introdusă trebuie să fie interval {0} caractere',
+      lengthTooShort: 'Valoarea introdusă este mai mică decât {0} caractere',
+      lengthTooLong: 'Valoarea introdusă este mai mare decât {0} caractere',
+      groupCheckedRange: 'Te rog alege între {0} elemnt(e)',
+      groupCheckedTooFew: 'Te rog alege măcar {0} elemnt(e)',
+      groupCheckedTooMany: 'Te rog alege maxim {0} elemnt(e)',
+      badNumberOfSelectedOptions: 'Trebuie să alegi măcar {0} răspunsuri',
       lengthTooLongStart: 'Valoarea introdusă este mai mare decât ',
       lengthTooShortStart: 'Valoarea introdusă este mai mică decât ',
       notConfirmed: 'Valorile introduse nu au fost confirmate',

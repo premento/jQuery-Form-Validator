@@ -3,17 +3,20 @@
  * ------------------------------------------
  * Created by Victor Jonsson <http://www.victorjonsson.se>
  *
- * The following module will make this jQuery plugin serve as a
- * html5 fallback. It makes older browsers support the following
- *  - validation when type="email"
- *  - validation when type="url"
- *  - validation when type="time"
- *  - validation when type="date"
- *  - validation when type="number" and max="" min=""
- *  - validation when pattern="REGEXP"
- *  - validation when using maxlength
- *  - Using datalist element for creating suggestions
- *  - placeholders
+ * Translates HTML5 validation attributes into this plugin's own rules, so
+ * that markup written for the browser is validated with the same messages and
+ * styling as everything else on the form:
+ *  - required
+ *  - type="email" / "url" / "time" / "date"
+ *  - type="number" with min="" max="" step=""
+ *  - pattern="REGEXP"
+ *  - maxlength
+ *
+ * With the "constraint-api" module also loaded and preferNativeValidation set,
+ * these constraints are handed to the browser to answer instead, and this
+ * module only marks the fields that carry them.
+ *
+ * The placeholder and datalist shims for pre-HTML5 browsers were removed in 3.0.
  *
  * @website http://formvalidator.net/
  * @license MIT
@@ -24,10 +27,32 @@
 
   $.formUtils.registerLoadedModule('html5');
 
-  var SUPPORTS_PLACEHOLDER = 'placeholder' in document.createElement('INPUT'),
-    SUPPORTS_DATALIST = 'options' in document.createElement('DATALIST'),
+  /**
+   * Merge rules into the element's data-validation without duplicating any.
+   *
+   * @param {jQuery} $input
+   * @param {Array} rules
+   */
+  var addValidationRules = function ($input, rules) {
+      var existing = $.split($input.attr('data-validation') || ''),
+        merged = [];
+
+      $.each(existing.concat(rules), function (i, rule) {
+        if (rule && $.inArray(rule, merged) === -1) {
+          merged.push(rule);
+        }
+      });
+
+      $input.attr('data-validation', merged.join(' '));
+    },
+
     hasLoadedDateModule = false,
-    setupValidationUsingHTML5Attr = function ($form) {
+    setupValidationUsingHTML5Attr = function ($form, conf) {
+
+      // Let the browser answer these constraints rather than translating
+      // them, when asked to and when the bridge module is there to ask.
+      var preferNative = !!(conf && conf.preferNativeValidation) &&
+        $.formUtils.hasLoadedModule('native');
 
       $form.each(function () {
         var $f = $(this),
@@ -38,13 +63,39 @@
           var validation = [],
             $input = $(this),
             isRequired = $input.attr('required'),
+            type = ($input.attr('type') || '').toLowerCase(),
             attrs = {};
+
+          if (preferNative) {
+            // One rule covers every native constraint on the element. Only
+            // tag fields that actually carry one, so untouched inputs are not
+            // dragged into validation.
+            if (isRequired ||
+                $input.attr('pattern') !== undefined ||
+                $input.attr('min') !== undefined ||
+                $input.attr('max') !== undefined ||
+                $input.attr('step') !== undefined ||
+                $input.attr('maxlength') !== undefined ||
+                $input.attr('minlength') !== undefined ||
+                $.inArray(type, ['email', 'url', 'number', 'date', 'time']) > -1) {
+              validation.push('native');
+            }
+
+            if (validation.length) {
+              foundHtml5Rule = true;
+              if (!isRequired) {
+                $input.attr('data-validation-optional', 'true');
+              }
+              addValidationRules($input, ['native']);
+            }
+            return;
+          }
 
           if (isRequired) {
             validation.push('required');
           }
 
-          switch (($input.attr('type') || '').toLowerCase()) {
+          switch (type) {
             case 'time':
               validation.push('time');
               if (!$.formUtils.validators.validate_date && !hasLoadedDateModule) {
@@ -99,27 +150,6 @@
             attrs['data-validation-length'] = 'max' + $input.attr('maxlength');
           }
 
-          if (!SUPPORTS_DATALIST && $input.attr('list')) {
-            var suggestions = [],
-              $list = $('#' + $input.attr('list'));
-
-            $list.find('option').each(function () {
-              suggestions.push($(this).text());
-            });
-
-            if (suggestions.length === 0) {
-              // IE fix
-              var opts = ($('#' + $input.attr('list')).text() || '').trim().split('\n');
-              $.each(opts, function (i, option) {
-                suggestions.push((option || '').trim());
-              });
-            }
-
-            $list.remove();
-
-            $.formUtils.suggest($input, suggestions);
-          }
-
           if (validation.length) {
             if (!isRequired) {
               attrs['data-validation-optional'] = 'true';
@@ -127,8 +157,7 @@
 
             foundHtml5Rule = true;
 
-            var validationRules = ($input.attr('data-validation') || '') + ' ' + validation.join(' ');
-            $input.attr('data-validation', (validationRules || '').trim());
+            addValidationRules($input, validation);
 
             $.each(attrs, function (attrName, attrVal) {
               $input.attr(attrName, attrVal);
@@ -140,33 +169,14 @@
           $f.trigger('html5ValidationAttrsFound');
         }
 
-        if (!SUPPORTS_PLACEHOLDER) {
-          $formInputs.filter('input[placeholder]').each(function () {
-            this.__defaultValue = this.getAttribute('placeholder');
-            $(this)
-              .bind('focus', function () {
-                if (this.value === this.__defaultValue) {
-                  this.value = '';
-                  $(this).removeClass('showing-placeholder');
-                }
-              })
-              .bind('blur', function () {
-                if ((this.value || '').trim() === '') {
-                  this.value = this.__defaultValue;
-                  $(this).addClass('showing-placeholder');
-                }
-              });
-          });
-        }
-
       });
     };
 
-  $.formUtils.$win.bind('validatorsLoaded formValidationSetup', function (evt, $form) {
+  $.formUtils.$win.bind('validatorsLoaded formValidationSetup', function (evt, $form, conf) {
     if (!$form) {
       $form = $('form');
     }
-    setupValidationUsingHTML5Attr($form);
+    setupValidationUsingHTML5Attr($form, conf);
   });
 
   // Make this method available outside the module

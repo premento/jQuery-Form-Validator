@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"D:\\\\01_Work\\\\Git\\\\jQuery-Form-Validator\" -Force)",
+      "Bash(Select-Object Name, Mode)",
+      "PowerShell(Head -20)"
+    ]
+  }
+}

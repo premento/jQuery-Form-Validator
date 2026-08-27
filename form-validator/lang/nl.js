@@ -62,6 +62,18 @@
       imageTooTall: 'de afbeelding kan niet langer zijn dan',
       imageTooWide: 'de afbeelding kan niet wijder zijn dan',
       lengthBadEnd: ' karakters',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'De ingevoerde waarde moet liggen tussen {0} karakters',
+      lengthTooShort: 'De ingevoerde waarde is korter dan {0} karakters',
+      lengthTooLong: 'De ingevoerde waarde is langer dan {0} karakters',
+      groupCheckedRange: 'Kies a.u.b. tussen {0} item(s)',
+      groupCheckedTooFew: 'Kies a.u.b. ten minste {0} item(s)',
+      groupCheckedTooMany: 'Kies a.u.b. maximaal {0} item(s)',
+      badNumberOfSelectedOptions: 'U moet tenminste {0} antwoorden',
       lengthBadStart: 'De ingevoerde waarde moet liggen tussen ',
       lengthTooLongStart: 'De ingevoerde waarde is langer dan ',
       lengthTooShortStart: 'De ingevoerde waarde is korter dan ',

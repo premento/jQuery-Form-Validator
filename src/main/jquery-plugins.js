@@ -118,13 +118,19 @@
 
               $elem.after($help);
             }
-            $help.fadeIn();
+            if ($.formUtils.a11y.prefersReducedMotion()) {
+              $help.show();
+            } else {
+              $help.fadeIn();
+            }
           })
           .bind('blur.help', function () {
-            $(this)
-              .parent()
-              .find('.' + className)
-              .fadeOut('slow');
+            var $hiding = $(this).parent().find('.' + className);
+            if ($.formUtils.a11y.prefersReducedMotion()) {
+              $hiding.hide();
+            } else {
+              $hiding.fadeOut('slow');
+            }
           });
       }
     });
@@ -152,7 +158,7 @@
 
       $elem.validateInputOnBlur(
         language,
-        $.extend({}, formDefaultConfig, conf || {}),
+        $.extend({}, formDefaultConfig, conf || {}),
         true
       );
     });
@@ -176,11 +182,11 @@
    *
    * @param {Object} [language] Optional, will override $.formUtils.LANG
    * @param {Object} [conf] Optional, will override the default settings
-   * @param {Boolean} attachKeyupEvent Optional
+   * @param {Boolean} attachInputEvent Optional
    * @param {String} eventContext
    * @return {jQuery}
    */
-  $.fn.validateInputOnBlur = function (language, conf, attachKeyupEvent, eventContext) {
+  $.fn.validateInputOnBlur = function (language, conf, attachInputEvent, eventContext) {
 
     $.formUtils.eventType = eventContext;
 
@@ -190,7 +196,7 @@
         postponeTime = this.valAttr('postpone') || 200;
 
       window.postponedValidation = function () {
-        _self.validateInputOnBlur(language, conf, attachKeyupEvent, eventContext);
+        _self.validateInputOnBlur(language, conf, attachInputEvent, eventContext);
         window.postponedValidation = false;
       };
 
@@ -226,8 +232,8 @@
         .one('validation.revalidate', reValidate);
     }
 
-    if (attachKeyupEvent) {
-      $elem.removeKeyUpValidation();
+    if (attachInputEvent) {
+      $elem.removeInputValidation();
     }
 
     if (result.shouldChangeDisplay) {
@@ -238,26 +244,29 @@
       }
     }
 
-    if (!result.isValid && attachKeyupEvent) {
-      $elem.validateOnKeyUp(language, conf);
+    if (!result.isValid && attachInputEvent) {
+      $elem.validateOnInput(language, conf);
     }
 
     return this;
   };
 
   /**
-   * Validate element on keyup-event
+   * Re-validate an element as its value changes.
+   *
+   * Bound to "input" rather than "keyup". keyup misses paste, autofill,
+   * drag-and-drop, speech input and IME composition -- all of which change the
+   * value without a key ever being released. It also never fires for Tab, so
+   * the keyCode check the old keyup handler needed is gone.
    */
-  $.fn.validateOnKeyUp = function(language, conf) {
+  $.fn.validateOnInput = function(language, conf) {
     this.each(function() {
       var $input = $(this);
-      if (!$input.valAttr('has-keyup-event')) {
+      if (!$input.valAttr('has-input-event')) {
         $input
-          .valAttr('has-keyup-event', 'true')
-          .bind('keyup.validation', function (evt) {
-            if( evt.keyCode !== 9 ) {
-              $input.validateInputOnBlur(language, conf, false, 'keyup');
-            }
+          .valAttr('has-input-event', 'true')
+          .bind('input.validation', function () {
+            $input.validateInputOnBlur(language, conf, false, 'input');
           });
       }
     });
@@ -265,15 +274,31 @@
   };
 
   /**
-   * Remove validation on keyup
+   * Stop re-validating an element as its value changes.
    */
-  $.fn.removeKeyUpValidation = function() {
+  $.fn.removeInputValidation = function() {
     this.each(function() {
       $(this)
-        .valAttr('has-keyup-event', false)
-        .unbind('keyup.validation');
+        .valAttr('has-input-event', false)
+        .unbind('input.validation');
     });
     return this;
+  };
+
+  /**
+   * @deprecated since 3.0, use $.fn.validateOnInput
+   */
+  $.fn.validateOnKeyUp = function(language, conf) {
+    $.formUtils.warn('Use of deprecated function $.fn.validateOnKeyUp, use $.fn.validateOnInput instead');
+    return this.validateOnInput(language, conf);
+  };
+
+  /**
+   * @deprecated since 3.0, use $.fn.removeInputValidation
+   */
+  $.fn.removeKeyUpValidation = function() {
+    $.formUtils.warn('Use of deprecated function $.fn.removeKeyUpValidation, use $.fn.removeInputValidation instead');
+    return this.removeInputValidation();
   };
 
   /**
@@ -333,6 +358,7 @@
     var addErrorMessage = function (mess, $elem) {
         if ($.inArray(mess, errorMessages) < 0) {
           errorMessages.push(mess);
+          errorItems.push({message: mess, $input: $elem});
         }
         errorInputs.push($elem);
         $elem.valAttr('current-error', mess);
@@ -346,6 +372,9 @@
 
       /** Error messages for this validation */
       errorMessages = [],
+
+      /** Error messages paired with the input each one came from */
+      errorItems = [],
 
       /** Input elements which value was not valid */
       errorInputs = [],
@@ -423,7 +452,7 @@
     if (errorInputs.length > 0) {
       if (displayError) {
         if (conf.errorMessagePosition === 'top') {
-          $.formUtils.dialogs.setMessageInTopOfForm($form, errorMessages, conf, language);
+          $.formUtils.dialogs.setMessageInTopOfForm($form, errorMessages, conf, language, errorItems);
         } else {
           $.each(errorInputs, function (i, $input) {
             $.formUtils.dialogs.setInlineMessage($input, $input.valAttr('current-error'), conf);
@@ -431,6 +460,13 @@
         }
         if (conf.scrollToTopOnError) {
           $.formUtils.$win.scrollTop($form.offset().top - 20);
+        }
+        if (conf.focusOnError) {
+          if (conf.errorMessagePosition === 'top') {
+            $.formUtils.a11y.focus($form.find('.' + conf.errorMessageClass + '.alert').eq(0));
+          } else {
+            $.formUtils.a11y.focus(errorInputs[0]);
+          }
         }
       }
     }

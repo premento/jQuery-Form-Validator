@@ -26,6 +26,18 @@
       badDate: 'თქვენ მიუთითეთ არასწორი თარიღი',
       lengthBadStart: 'ველის მნიშვნელობის სიგრძე უნდა იყოს ',
       lengthBadEnd: ' შუალედში',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'ველის მნიშვნელობის სიგრძე უნდა იყოს {0} შუალედში',
+      lengthTooShort: 'ველის მნიშვნელობის სიგრძე უნდა იყოს მინიმუმ {0} შუალედში',
+      lengthTooLong: 'ველის მნიშვნელობის სიგრძე უნდა იყოს მაქსიმუმ {0} შუალედში',
+      groupCheckedRange: 'გთხოვთ, აირჩიოთ {0} პუნქტი',
+      groupCheckedTooFew: 'გთხოვთ, აირჩიოთ სულ მცირე {0} პუნქტი',
+      groupCheckedTooMany: 'გთხოვთ, აირჩიოთ მაქსიმუმ {0} პუნქტი',
+      badNumberOfSelectedOptions: 'თქვენ უნდა აირჩიოთ სულ მცირე {0} პასუხი',
       lengthTooLongStart: 'ველის მნიშვნელობის სიგრძე უნდა იყოს მაქსიმუმ ',
       lengthTooShortStart: 'ველის მნიშვნელობის სიგრძე უნდა იყოს მინიმუმ ',
       notConfirmed: 'ველის მნიშვნელობები ვერ დადასტურდა',

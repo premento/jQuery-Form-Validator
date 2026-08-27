@@ -43,6 +43,18 @@
       badDate: 'Geçersiz tarih girdiniz',
       lengthBadStart: 'Girilen değer ',
       lengthBadEnd: ' karakter olmalıdır',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'Girilen değer {0} karakter olmalıdır',
+      lengthTooShort: 'Girilen değer en az {0} karakter olmalıdır',
+      lengthTooLong: 'Girilen değer en fazla {0} karakter olmalıdır',
+      groupCheckedRange: 'Lütfen {0} adet seçiniz',
+      groupCheckedTooFew: 'Lütfen en az {0} adet seçiniz',
+      groupCheckedTooMany: 'Lütfen en fazla {0} adet seçiniz',
+      badNumberOfSelectedOptions: 'En az {0} cevap seçmeniz gerekiyor',
       lengthTooLongStart: 'Girilen değer en fazla ',
       lengthTooShortStart: 'Girilen değer en az ',
       notConfirmed: 'Girilen değerler uyuşmuyor',

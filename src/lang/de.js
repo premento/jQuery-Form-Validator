@@ -26,6 +26,18 @@
       badDate: 'Eingabe eines falschen Datums',
       lengthBadStart: 'Der eingegebene Wert muss dazwischen sein ',
       lengthBadEnd: '  Zeichen',
+
+      // 3.0 templates, composed from the fragments above so the rendered
+      // sentence is unchanged. Reorder freely -- {0} is the number. Plural
+      // forms may be added as {one: ..., other: ...} where this language
+      // needs them.
+      lengthBadRange: 'Der eingegebene Wert muss dazwischen sein {0}  Zeichen',
+      lengthTooShort: 'Der eingegebene Wert ist kleiner als {0}  Zeichen',
+      lengthTooLong: 'Der eingegebene Wert ist größer als {0}  Zeichen',
+      groupCheckedRange: 'Wählen Sie zwischen{0} Auswahl',
+      groupCheckedTooFew: 'Dann müssen Sie zumindest sicher,{0} Auswahl',
+      groupCheckedTooMany: 'Sie können nicht mehr als zu machen{0} Auswahl',
+      badNumberOfSelectedOptions: 'Wählen Sie zu mindestens {0} Antwort',
       lengthTooLongStart: 'Der eingegebene Wert ist größer als ',
       lengthTooShortStart: 'Der eingegebene Wert ist kleiner als ',
       notConfirmed: 'Die Eingaben sind unterschiedlich',

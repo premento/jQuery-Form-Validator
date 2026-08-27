@@ -60,26 +60,68 @@
       }
     };
 
+  var DEFAULT_DEBOUNCE = 500;
+
   function AsyncValidation($form, $input) {
     this.$form = $form;
     this.$input = $input;
     this.lastEventContext = null;
     this._generation = 0;
+    this._debounceId = null;
     this._boundReset = this.reset.bind(this);
     $input.on('change paste', this._boundReset);
     this.reset();
   }
 
+  /**
+   * How long to wait before actually calling out, in milliseconds.
+   * Set data-validation-debounce="0" on the input to call out immediately.
+   *
+   * @return {Number}
+   */
+  AsyncValidation.prototype.debounceDelay = function() {
+    var configured = this.$input.valAttr('debounce');
+    if (configured === undefined || configured === '') {
+      return DEFAULT_DEBOUNCE;
+    }
+    var parsed = parseInt(configured, 10);
+    return isNaN(parsed) || parsed < 0 ? DEFAULT_DEBOUNCE : parsed;
+  };
+
   AsyncValidation.prototype.reset = function() {
-    this.haltedFormValidation = false;
+    // Hand back a halt this instance is still holding. HaltManager counts
+    // halts per form, so silently dropping the flag leaves the counter above
+    // zero and the form can never be submitted again. Editing the field
+    // between a check being scheduled and it resolving is the ordinary way to
+    // reach this.
+    if (this.haltedFormValidation) {
+      this.haltedFormValidation = false;
+      HaltManager.unHaltValidation(this.$form);
+    }
+
+    if (this.isRunning) {
+      // The in-flight state is being abandoned, so drop its markers too.
+      this.$input.removeAttr('aria-busy').removeClass('async-validation');
+      this.$form.removeClass('async-validation');
+    }
+
     this.hasRun = false;
     this.isRunning = false;
     this.result = undefined;
     this._generation++;
+
+    // A call scheduled against the previous value must not go out. The
+    // generation check would discard its result anyway, but there is no point
+    // making the request at all.
+    if (this._debounceId !== null) {
+      clearTimeout(this._debounceId);
+      this._debounceId = null;
+    }
   };
 
   AsyncValidation.prototype.run = function(eventContext, callback) {
-    if (eventContext === 'keyup') {
+    // Never fire a network round trip while the user is still typing.
+    if (eventContext === 'input' || eventContext === 'keyup') {
       return null;
     } else if (this.isRunning) {
       this.lastEventContext = eventContext;
@@ -95,30 +137,75 @@
       HaltManager.haltValidation(this.$form);
       this.haltedFormValidation = true;
       this.isRunning = true;
+
+      // aria-busy rather than disabled. Disabling the field steals focus,
+      // takes it out of the tab order and hides it from assistive technology,
+      // and a disabled control is omitted from form submission entirely.
       this.$input
-        .attr('disabled', 'disabled')
+        .attr('aria-busy', 'true')
         .addClass('async-validation');
       this.$form.addClass('async-validation');
 
-      var gen = this._generation;
-      var self = this;
+      this.schedule(eventContext, callback);
 
-      var timeoutId = setTimeout(function() {
+      return null;
+    }
+  };
+
+  /**
+   * Wait out the debounce, then call out. The form stays halted for the whole
+   * window, so nothing can be submitted past a check that has not run yet.
+   *
+   * @param {String} eventContext
+   * @param {Function} callback
+   */
+  AsyncValidation.prototype.schedule = function(eventContext, callback) {
+    var self = this,
+      gen = this._generation,
+      // Submitting is a commitment, not a keystroke -- make the user wait for
+      // the request, never for the debounce on top of it.
+      delay = eventContext === 'submit' ? 0 : this.debounceDelay();
+
+    if (this._debounceId !== null) {
+      clearTimeout(this._debounceId);
+      this._debounceId = null;
+    }
+
+    if (!delay) {
+      this.invoke(gen, callback);
+      return;
+    }
+
+    this._debounceId = setTimeout(function() {
+      self._debounceId = null;
+      if (self._generation === gen) {
+        self.invoke(gen, callback);
+      }
+    }, delay);
+  };
+
+  /**
+   * Hand control to the validator and start the timeout clock, which only
+   * begins once the request is genuinely on its way.
+   *
+   * @param {Number} gen
+   * @param {Function} callback
+   */
+  AsyncValidation.prototype.invoke = function(gen, callback) {
+    var self = this,
+      timeoutId = setTimeout(function() {
         if (self.isRunning && self._generation === gen) {
           self.done(null);
           $.formUtils.warn('Async validation timed out for ' + self.$input.attr('name'));
         }
       }, 30000);
 
-      callback(function(result) {
-        clearTimeout(timeoutId);
-        if (self._generation === gen) {
-          self.done(result);
-        }
-      });
-
-      return null;
-    }
+    callback(function(result) {
+      clearTimeout(timeoutId);
+      if (self._generation === gen) {
+        self.done(result);
+      }
+    });
   };
 
   AsyncValidation.prototype.done = function(result) {
@@ -126,7 +213,7 @@
     this.hasRun = true;
     this.isRunning = false;
     this.$input
-      .removeAttr('disabled')
+      .removeAttr('aria-busy')
       .removeClass('async-validation');
     this.$form.removeClass('async-validation');
     if (this.haltedFormValidation) {

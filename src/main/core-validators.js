@@ -68,6 +68,12 @@
   /*
    * Validate domain name
    */
+  // A top level domain is either all letters, or an IDN A-label: "xn--"
+  // followed by alphanumerics and hyphens. Rejecting every hyphen here
+  // turned away real internationalised domains such as test.xn--fiqz9s
+  // (.中国), so the two cases are spelled out.
+  var TLD_PATTERN = /^(?:[a-zA-Z]{2,}|xn--[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*)$/;
+
   $.formUtils.addValidator({
     name: 'domain',
     validatorFunction: function (val) {
@@ -75,7 +81,9 @@
       var tld = labels[labels.length - 1];
       return val.length > 0 &&
         val.length <= 253 && // Including sub domains
-        tld.length >= 2 && !(/[^a-zA-Z0-9]/.test(tld)) && !(/[^a-zA-Z0-9]/.test(val.substr(0, 1))) && !(/[^a-zA-Z0-9\.\-]/.test(val)) &&
+        TLD_PATTERN.test(tld) &&
+        !(/[^a-zA-Z0-9]/.test(val.substr(0, 1))) &&
+        !(/[^a-zA-Z0-9\.\-]/.test(val)) &&
         val.split('..').length === 1 &&
         labels.length > 1;
     },
@@ -133,17 +141,22 @@
 
       switch (lengthCheckResults[0]) {   // outside of allowed range
         case 'out':
-          this.errorMessage = lang.lengthBadStart + lengthAllowed + lang.lengthBadEnd;
+          this.errorMessage = $.formUtils.resolveCountMessage(
+            lang, 'lengthBadRange', 'lengthBadStart', lang.lengthBadEnd, lengthAllowed);
           checkResult = false;
           break;
         // too short
         case 'min':
-          this.errorMessage = lang.lengthTooShortStart + lengthCheckResults[1] + lang.lengthBadEnd;
+          this.errorMessage = $.formUtils.resolveCountMessage(
+            lang, 'lengthTooShort', 'lengthTooShortStart', lang.lengthBadEnd,
+            lengthCheckResults[1], lengthCheckResults[1]);
           checkResult = false;
           break;
         // too long
         case 'max':
-          this.errorMessage = lang.lengthTooLongStart + lengthCheckResults[1] + lang.lengthBadEnd;
+          this.errorMessage = $.formUtils.resolveCountMessage(
+            lang, 'lengthTooLong', 'lengthTooLongStart', lang.lengthBadEnd,
+            lengthCheckResults[1], lengthCheckResults[1]);
           checkResult = false;
           break;
         // ok
@@ -215,14 +228,14 @@
           sanitize = $el.attr('data-sanitize') || '',
           isFormattedWithNumeral = sanitize.match(/(^|[\s])numberFormat([\s]|$)/i);
 
-        if (isFormattedWithNumeral) {
-          if (!window.numeral) {
-            throw new ReferenceError('The data-sanitize value numberFormat cannot be used without the numeral' +
-              ' library. Please see Data Validation in http://www.formvalidator.net for more information.');
-          }
-          if (val.length) {
-            val = String(numeral().unformat(val));
-          }
+        if (decimalSeparator === 'auto') {
+          decimalSeparator = $.formUtils.localeDecimalSeparator();
+        }
+
+        if (isFormattedWithNumeral && val.length) {
+          // numeral is optional as of 3.0; unformatNumber falls back to
+          // stripping grouping characters when it is not on the page.
+          val = $.formUtils.unformatNumber(val);
         }
 
         if (allowing.indexOf('number') === -1) {
@@ -254,6 +267,14 @@
 
         if (decimalSeparator === ',') {
           if (val.indexOf('.') > -1) {
+            // With a comma as the decimal separator a dot can only be a
+            // thousands separator, so it has to fall on a group boundary.
+            // Stripping every dot unconditionally turned "1.0236" -- a dot
+            // used as a decimal point, which this input does not accept --
+            // into the integer 10236.
+            if (!/^[+-]?\d{1,3}(\.\d{3})*(,\d+)?$/.test(val)) {
+              return false;
+            }
             val = val.replace(/\./g, '');
           }
           val = val.replace(',', '.');
@@ -404,17 +425,24 @@
       switch (qtyCheckResults[0]) {
         // outside allowed range
         case 'out':
-          this.errorMessage = lang.groupCheckedRangeStart + qtyAllowed + lang.groupCheckedEnd;
+          this.errorMessage = $.formUtils.resolveCountMessage(
+            lang, 'groupCheckedRange', 'groupCheckedRangeStart', lang.groupCheckedEnd, qtyAllowed);
           isValid = false;
           break;
         // below min qty
         case 'min':
-          this.errorMessage = lang.groupCheckedTooFewStart + qtyCheckResults[1] + (lang.groupCheckedTooFewEnd || lang.groupCheckedEnd);
+          this.errorMessage = $.formUtils.resolveCountMessage(
+            lang, 'groupCheckedTooFew', 'groupCheckedTooFewStart',
+            lang.groupCheckedTooFewEnd || lang.groupCheckedEnd,
+            qtyCheckResults[1], qtyCheckResults[1]);
           isValid = false;
           break;
         // above max qty
         case 'max':
-          this.errorMessage = lang.groupCheckedTooManyStart + qtyCheckResults[1] + (lang.groupCheckedTooManyEnd || lang.groupCheckedEnd);
+          this.errorMessage = $.formUtils.resolveCountMessage(
+            lang, 'groupCheckedTooMany', 'groupCheckedTooManyStart',
+            lang.groupCheckedTooManyEnd || lang.groupCheckedEnd,
+            qtyCheckResults[1], qtyCheckResults[1]);
           isValid = false;
           break;
         // ok

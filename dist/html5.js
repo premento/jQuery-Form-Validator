@@ -1,0 +1,205 @@
+(function (root, factory) {
+  if (root === undefined && window !== undefined) root = window;
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module unless amdModuleId is set
+    define(["jquery"], function (a0) {
+      return (factory(a0));
+    });
+  } else if (typeof module === 'object' && module.exports) {
+    // Node. Does not work with strict CommonJS, but
+    // only CommonJS-like environments that support module.exports,
+    // like Node.
+    module.exports = factory(require("jquery"));
+  } else {
+    factory(root["jQuery"]);
+  }
+}(this, function (jQuery) {
+
+/**
+ * jQuery Form Validator Module: html5
+ * ------------------------------------------
+ * Created by Victor Jonsson <http://www.victorjonsson.se>
+ *
+ * Translates HTML5 validation attributes into this plugin's own rules, so
+ * that markup written for the browser is validated with the same messages and
+ * styling as everything else on the form:
+ *  - required
+ *  - type="email" / "url" / "time" / "date"
+ *  - type="number" with min="" max="" step=""
+ *  - pattern="REGEXP"
+ *  - maxlength
+ *
+ * With the "constraint-api" module also loaded and preferNativeValidation set,
+ * these constraints are handed to the browser to answer instead, and this
+ * module only marks the fields that carry them.
+ *
+ * The placeholder and datalist shims for pre-HTML5 browsers were removed in 3.0.
+ *
+ * @website http://formvalidator.net/
+ * @license MIT
+ */
+(function ($) {
+
+  'use strict';
+
+  $.formUtils.registerLoadedModule('html5');
+
+  /**
+   * Merge rules into the element's data-validation without duplicating any.
+   *
+   * @param {jQuery} $input
+   * @param {Array} rules
+   */
+  var addValidationRules = function ($input, rules) {
+      var existing = $.split($input.attr('data-validation') || ''),
+        merged = [];
+
+      $.each(existing.concat(rules), function (i, rule) {
+        if (rule && $.inArray(rule, merged) === -1) {
+          merged.push(rule);
+        }
+      });
+
+      $input.attr('data-validation', merged.join(' '));
+    },
+
+    hasLoadedDateModule = false,
+    setupValidationUsingHTML5Attr = function ($form, conf) {
+
+      // Let the browser answer these constraints rather than translating
+      // them, when asked to and when the bridge module is there to ask.
+      var preferNative = !!(conf && conf.preferNativeValidation) &&
+        $.formUtils.hasLoadedModule('native');
+
+      $form.each(function () {
+        var $f = $(this),
+          $formInputs = $f.find('input,textarea,select'),
+          foundHtml5Rule = false;
+
+        $formInputs.each(function () {
+          var validation = [],
+            $input = $(this),
+            isRequired = $input.attr('required'),
+            type = ($input.attr('type') || '').toLowerCase(),
+            attrs = {};
+
+          if (preferNative) {
+            // One rule covers every native constraint on the element. Only
+            // tag fields that actually carry one, so untouched inputs are not
+            // dragged into validation.
+            if (isRequired ||
+                $input.attr('pattern') !== undefined ||
+                $input.attr('min') !== undefined ||
+                $input.attr('max') !== undefined ||
+                $input.attr('step') !== undefined ||
+                $input.attr('maxlength') !== undefined ||
+                $input.attr('minlength') !== undefined ||
+                $.inArray(type, ['email', 'url', 'number', 'date', 'time']) > -1) {
+              validation.push('native');
+            }
+
+            if (validation.length) {
+              foundHtml5Rule = true;
+              if (!isRequired) {
+                $input.attr('data-validation-optional', 'true');
+              }
+              addValidationRules($input, ['native']);
+            }
+            return;
+          }
+
+          if (isRequired) {
+            validation.push('required');
+          }
+
+          switch (type) {
+            case 'time':
+              validation.push('time');
+              if (!$.formUtils.validators.validate_date && !hasLoadedDateModule) {
+                hasLoadedDateModule = true;
+                $.formUtils.loadModules('date');
+              }
+              break;
+            case 'url':
+              validation.push('url');
+              break;
+            case 'email':
+              validation.push('email');
+              break;
+            case 'date':
+              validation.push('date');
+              break;
+            case 'number':
+              validation.push('number');
+              var max = $input.attr('max'),
+                min = $input.attr('min'),
+                step = $input.attr('step');
+              if (min || max) {
+                if (!min) {
+                  min = '0';
+                }
+                if (!max) {
+                  max = '9007199254740992'; // js max int
+                }
+                if (!step) {
+                  step = '1'; // default value
+                }
+
+                attrs['data-validation-allowing'] = 'range[' + min + ';' + max + ']';
+                if (min.indexOf('-') === 0 || max.indexOf('-') === 0) {
+                  attrs['data-validation-allowing'] += ',negative';
+                }
+                if (min.indexOf('.') > -1 || max.indexOf('.') > -1 || step.indexOf('.') > -1) {
+                  attrs['data-validation-allowing'] += ',float';
+                }
+              } else {
+                attrs['data-validation-allowing'] = 'float,negative';
+              }
+              break;
+          }
+
+          if ($input.attr('pattern')) {
+            validation.push('custom');
+            attrs['data-validation-regexp'] = $input.attr('pattern');
+          }
+          if ($input.attr('maxlength')) {
+            validation.push('length');
+            attrs['data-validation-length'] = 'max' + $input.attr('maxlength');
+          }
+
+          if (validation.length) {
+            if (!isRequired) {
+              attrs['data-validation-optional'] = 'true';
+            }
+
+            foundHtml5Rule = true;
+
+            addValidationRules($input, validation);
+
+            $.each(attrs, function (attrName, attrVal) {
+              $input.attr(attrName, attrVal);
+            });
+          }
+        });
+
+        if (foundHtml5Rule) {
+          $f.trigger('html5ValidationAttrsFound');
+        }
+
+      });
+    };
+
+  $.formUtils.$win.bind('validatorsLoaded formValidationSetup', function (evt, $form, conf) {
+    if (!$form) {
+      $form = $('form');
+    }
+    setupValidationUsingHTML5Attr($form, conf);
+  });
+
+  // Make this method available outside the module
+  $.formUtils.setupValidationUsingHTML5Attr = setupValidationUsingHTML5Attr;
+
+})(jQuery, window);
+
+
+}));
