@@ -4,7 +4,7 @@
 
 I started writing this plugin back in 2009 and it has given me much joy over the years. But all good things must come to an end and now it's time for this plugin to pull in its oars and go down with history.
 
-**This plugin is no longer being developed!** It supports jQuery v. 1.8 >= 2.2.4. No pull requests will become merged in but feel free to fork and do whatever you like!
+**Upstream development stopped, and the notice above is the original author's.** This 3.0 release comes from a fork that resumed the work. jQuery 1.8 through 4.0 are supported, and every release is tested against 1.12.4, 2.2.4, 3.7.1 and 4.0.0 in CI — see [What's new in 3.0](#whats-new-in-30).
 
 <!-- Travis was retired in 3.0; CI runs in GitHub Actions (.github/workflows/ci.yml). -->
 
@@ -244,6 +244,20 @@ $.validate({
 
 Helpers are available directly: `$.formUtils.formatMessage(template, params, count)`, `$.formUtils.selectPluralForm(forms, count)` and `$.formUtils.locale()`.
 
+### The accessibility helpers
+
+The behaviour described under [Accessibility](#accessibility) is implemented by `$.formUtils.a11y`,
+which is public so a custom validator or a custom error renderer can keep the same guarantees:
+
+| Method | Description |
+| ------ | ----------- |
+| `ensureInputId($input)` | Return the field's id, generating and assigning one if it has none. Used to make summary entries linkable. |
+| `markInvalid($input)` | Set `aria-invalid="true"` on the field. |
+| `describeError($input, $message)` | Give the message an id, point the field's `aria-describedby` at it, and mark it `aria-live="polite"`. Any `aria-describedby` you set yourself is preserved. |
+| `clearError($input)` | Remove `aria-invalid` and drop only the token this plugin added to `aria-describedby`. |
+| `prefersReducedMotion()` | `true` when the visitor has asked for reduced motion, so animations can be skipped. |
+| `focus($elem)` | Move focus to an element that is not natively focusable, adding `tabindex="-1"` as needed. |
+
 ### Numbers
 
 `decimalSeparator` gains an `'auto'` setting that takes the separator from the browser locale via `Intl.NumberFormat`:
@@ -332,7 +346,7 @@ This plugin can serve as a fallback solution for the validation attributes in th
  * **length** — *min/max/range*
  * **required** — *no validation except that a value has to be given*
  * **custom** — *Validate value against regexp*
- * **checkboxgroup** — *ensure at least 1 checkbox in group has been selected*
+ * **checkbox_group** — *ensure at least 1 checkbox in group has been selected*
  * Show help information automatically when input is focused
  * Validate given values immediately when input looses focus.
  * Make validation optional by adding attribute data-validation-optional="true" to the element. This means
@@ -348,7 +362,7 @@ Read the documentation for the default features at [#default-validators](#defaul
  * **spamcheck**
  * **confirmation**
  * **creditcard**
- * **CVV**
+ * **cvv** — *card security code; length follows the card type the form accepts*
  * **strength** — *Validate the strength of a password (rescored in 3.0, see [Passwords](#passwords))*
  * **breached** — *Check a password against Have I Been Pwned. Opt-in; makes a network request*
  * **complexity** — *Deprecated in 3.0. Enforces composition rules NIST retired*
@@ -390,18 +404,19 @@ Read the documentation for this module at [/#logic](#logic)
 
 ### Module: sepa
 
-* **IBAN**
-* **BIC**
-* **Sepa**
+* **iban** — *validate an International Bank Account Number*
+* **bic** — *validate a Bank Identifier Code*
+* **sepa** — *validate an IBAN that belongs to the SEPA area*
 
 Read the documentation for this module at [http://formvalidator.net/#sepa](http://www.formvalidator.net/#sepa)
 
 
 ### Module: sweden
- * **swemob** — *validate that the value is a swedish mobile telephone number*
  * **swesec** — *validate swedish social security number*
- * **county** - *validate that the value is an existing county in Sweden*
- * **municipality** - *validate that the value is an existing municipality in Sweden*
+ * **swephone** — *validate that the value is a swedish telephone number*
+ * **swemobile** — *validate that the value is a swedish mobile telephone number*
+ * **swecounty** — *validate that the value is an existing county in Sweden*
+ * **swemunicipality** — *validate that the value is an existing municipality in Sweden*
  * Suggest county
  * Suggest municipality
 
@@ -431,6 +446,50 @@ Read the documentation for the UK module at [http://formvalidator.net/#uk-valida
  * **hsl** - *validate hsl color format*
  * **hsla** - *validate hsla color format*
 
+### Module: native
+
+*New in 3.0.* Bridges the browser's Constraint Validation API — see
+[Constraint Validation API bridge](#constraint-validation-api-bridge--module-native).
+
+ * **native** — *hand a field's HTML constraints to the browser and let `ValidityState` answer them*
+ * Mirrors every validation result onto the element with `setCustomValidity()`, so `element.validity`,
+   `form.checkValidity()` and the `:invalid` / `:user-invalid` pseudo-classes agree with your
+   `data-validation` rules.
+
+### Module: html5
+
+Serves as a fallback for the HTML5 validation attributes, and validates `type="url"`, `type="email"`,
+`type="number"`, `type="date"` and `type="time"` inputs. See [Support for HTML5](#support-for-html5).
+Add `preferNativeValidation: true` to have it emit `native` instead of translating attributes into the
+plugin's own validators.
+
+### Module: toggleDisabled
+
+Enables and disables the form's submit buttons as the form becomes valid or invalid, adding and
+removing a `disabled` class alongside the `disabled` attribute. Acts on value change, not only on
+mouse click.
+
+```js
+$.validate({ modules: 'toggleDisabled' });
+```
+
+### Module: jsconf
+
+Configure validation in JavaScript instead of with `data-validation` attributes, for cases where the
+markup is not yours to change. Exposes `$.setupValidation()`:
+
+```js
+$.setupValidation({
+    form: '#my-form',
+    validate: {
+        'user':  {validation: 'length', length: 'min4'},
+        'email': {validation: 'email'}
+    }
+});
+```
+
+Attributes not prefixed with `data-validation` may also be declared here.
+
 ### Module: sanitation
  * **trim**
  * **trimLeft**
@@ -442,7 +501,9 @@ Read the documentation for the UK module at [http://formvalidator.net/#uk-valida
  * **insertLeft**  — Declare a text that should be inserted at the beginning of the value, attribute data-sanitize-insert-left
  * **escape**  — Convert < > & ' " to html entities
  * **strip**  — Comma separated list with words that gets automatically removed
- * **numberFormat**  — Declare the attribute data-sanitize-number-format with any of the formats described on http://numeraljs.com/. Note that this rule requires that numeral.js is included in the page
+ * **insert**  — Insert text at either end, used via insertLeft/insertRight
+ * **numberFormat**  — Declare the attribute data-sanitize-number-format with any of the formats described on http://numeraljs.com/. Note that this rule requires that numeral.js is included in the page. As of 3.0 numeral is genuinely optional — without it the value degrades to having grouping characters stripped instead of throwing
+ * **localeNumberFormat**  — *New in 3.0.* Format through `Intl.NumberFormat`, no third-party dependency. See [Numbers](#numbers)
 
 Read the documentation for the sanitation module at [http://formvalidator.net/#data-sanitation](http://formvalidator.net/#data-sanitation)
 
@@ -532,27 +593,96 @@ It is possible to display help information for each input. The information will 
 
 ## Fully customizable
 
-Read about how to customize this plugin over at [http://formvalidator.net/#configuration](http://formvalidator.net/#configuration)
+Every option below is passed to `$.validate()`. The narrative documentation lives at
+[http://formvalidator.net/#configuration](http://formvalidator.net/#configuration); this table is the
+complete list as it stands in the source.
+
+### Setup
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `form` | `'form'` | Selector for the form(s) to set up. |
+| `modules` | `''` | Comma separated modules to load. Modules already registered by an `import` are not fetched. |
+| `lang` | — | Language code to load from `lang/`, e.g. `'sv'`. |
+| `language` | `false` | Object overriding individual messages. See [Messages and localisation](#messages-and-localisation). |
+| `ignore` | `[]` | Names of inputs to skip even if they carry validation rules. |
+| `novalidate` | `true` | Add `novalidate` to the form so the browser does not stack its own bubbles on the plugin's messages. A `novalidate` you wrote yourself is never removed. |
+| `observeDynamicFields` | `false` | Watch the form with a `MutationObserver` and wire up fields added after `$.validate()` ran. |
+| `preferNativeValidation` | `false` | With the `native` module loaded, let the browser answer `type`/`min`/`max`/`step`/`pattern`. |
+| `validateHiddenInputs` | `false` | Whether hidden inputs are validated. |
+
+### When validation runs
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `validateOnBlur` | `true` | Validate a field when it loses focus. |
+| `validateOnEvent` | `false` | Honour `data-validation-event="click"` on an element. See [Validate On Event](#validate-on-event). |
+| `validateCheckboxRadioOnClick` | `true` | Validate checkboxes and radios as soon as they are clicked. |
+| `showHelpOnFocus` | `true` | Fade in `data-validation-help` text on focus. |
+| `addSuggestions` | `true` | Enable the input-suggestion feature. |
+
+### Error presentation
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `errorMessagePosition` | `'inline'` | `'inline'` or `'top'`. `'top'` renders the error summary. |
+| `errorMessageTemplate` | see [Customising the error summary](#customising-the-error-summary) | Markup used to build the summary. Honoured from 3.0. |
+| `errorMessageClass` | `'form-error'` | Class on the element holding an error message. |
+| `errorElementClass` | `'error'` | Class applied to an invalid field. |
+| `successElementClass` | `'valid'` | Class applied to a field that validated. |
+| `addValidClassOnAll` | `false` | Apply `successElementClass` even to fields that were not validated. |
+| `inputParentClassOnError` | `'has-error'` | Class on the invalid field's parent (Bootstrap default). |
+| `inputParentClassOnSuccess` | `'has-success'` | Class on the valid field's parent (Bootstrap default). |
+| `borderColorOnError` | `'#b94a48'` | Border colour for an invalid field. Empty string leaves the border alone. |
+| `scrollToTopOnError` | `true` | Scroll to the summary on a failed submit. |
+| `focusOnError` | `true` | Move focus to the summary, or the first invalid field, on a failed submit. See [Accessibility](#accessibility). |
+| `inlineErrorMessageCallback` | `false` | `function($input, errorMsg, conf)` returning the element the inline message should be written into, for full control over placement. Return a falsy value to take over display entirely and suppress the plugin's own. |
+| `submitErrorMessageCallback` | `false` | `function($form, errorMessages, conf)` returning the container for the error summary. Return a falsy value to handle display yourself. Replaces the deprecated `errorMessageCustom`. |
+
+### Parsing
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `validationRuleAttribute` | `'data-validation'` | Attribute holding the validation rules. |
+| `validationErrorMsgAttribute` | `'data-validation-error-msg'` | Attribute holding a per-field custom message. |
+| `dateFormat` | `'yyyy-mm-dd'` | Format used by the `date` and `birthdate` validators. |
+| `decimalSeparator` | `'.'` | Set to `'auto'` to take it from the browser locale. See [Numbers](#numbers). |
+
+### Callbacks
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `onModulesLoaded` | `null` | Called once every module named in `modules` has registered. |
+| `onSuccess` | `false` | `function($form)` on a passing submit. Return `false` to stop submission. |
+| `onError` | `false` | `function($form)` on a failing submit. |
+| `onElementValidate` | `false` | `function(valid, $input, $form, errorMsg)` after each field is validated. |
 
 ### Validate On Event ###
 You can cause an element to be validated upon the firing of an event, by attaching an attribute to the form input element named `data-validation-event="click"`. When the configuration settings have `validateOnEvent : true`, the click event will trigger the onBlur validaton for that element. Possible use case: Checkboxes. Instead of waiting for the checkbox to lose focus (blur) and waiting for a validation to occurr, you can specify that elements validation should occur as soon as that checkbox element is clicked.
 
 ## Localization
 
-This plugin comes with translations for English, Polish,
-  Romanian,
-  Danish,
-  Norwegian,
-  Dutch,
-  Czech,
-  Catalan,
-  Russian,
-  Italian,
-  French,
-  German,
-  Swedish and
-  Portuguese. You can also choose to override the error
-dialogs yourself. Here you can read more about [localization](http://formvalidator.net/#localization)
+English is built in, and 20 translations are bundled:
+
+| Code | Language | Code | Language | Code | Language | Code | Language |
+| ---- | -------- | ---- | -------- | ---- | -------- | ---- | -------- |
+| `ar` | Arabic | `ca` | Catalan | `cs` | Czech | `da` | Danish |
+| `de` | German | `es` | Spanish | `fa` | Persian | `fr` | French |
+| `it` | Italian | `ka` | Georgian | `ko` | Korean | `nl` | Dutch |
+| `no` | Norwegian | `pl` | Polish | `pt` | Portuguese | `ro` | Romanian |
+| `ru` | Russian | `sv` | Swedish | `tr` | Turkish | `vi` | Vietnamese |
+
+```js
+$.validate({ lang: 'sv' });          // fetched at runtime
+```
+
+```js
+import 'jquery-form-validator/lang/sv';   // or registered up front, no request
+```
+
+You can also override individual messages with the `language` option instead of loading a file — see
+[Messages and localisation](#messages-and-localisation) for the 3.0 sentence templates and plural
+forms. Here you can read more about [localization](http://formvalidator.net/#localization)
 
 # Default validators
 
@@ -1236,6 +1366,46 @@ Use the attribute <code>data-validation-optional-if-answered</code> to tell the 
 
 ## Changelog
 
+#### 3.0.0
+
+Full detail in [What's new in 3.0](#whats-new-in-30). In brief:
+
+**Breaking**
+- `data-validation="strength"` is rescored on length rather than composition, following NIST SP 800-63B rev 4. Values that passed before may now fail. See [Passwords](#passwords).
+- `dist/` replaces `form-validator/` as the canonical output path. `form-validator/` is kept in step for one major version.
+
+**Added**
+- ES module build (`dist/esm/`), UMD build, subpath exports and bundled TypeScript declarations.
+- Accessibility: `aria-invalid`, `aria-describedby`, `aria-live` messages, `role="alert"` summary, focus management on failed submit, and reduced-motion support. WCAG AA contrast fix in the bundled theme.
+- Module `native` — bridges the Constraint Validation API so `element.validity`, `form.checkValidity()` and `:invalid` agree with your rules.
+- `data-validation="breached"` — screens passwords against Have I Been Pwned over k-anonymity. Opt-in.
+- Whole-sentence message templates with `{0}` placeholders and `Intl.PluralRules` plural forms. All 20 bundled languages carry templates.
+- `localeNumberFormat` sanitizer, and `decimalSeparator: 'auto'`.
+- New options: `focusOnError`, `novalidate`, `preferNativeValidation`, `observeDynamicFields`. See [Fully customizable](#fully-customizable).
+- Async validation is debounced via `data-validation-debounce`, and no longer disables the field while a request is in flight.
+- Public helpers: `$.formUtils.a11y`, `formatMessage`, `selectPluralForm`, `locale`.
+
+**Fixed**
+- Internationalised domains (IDN A-labels) were rejected, which also broke URL validation.
+- The CVV validator never received the card type, so amex-only forms rejected valid four digit codes.
+- `1.0236` was accepted as an integer when `decimal-separator` was `,`.
+- A date format without a day, such as `mm/yyyy`, was always invalid.
+- `errorMessageTemplate` was documented in 2.x but never read; the summary markup was hardcoded.
+- Live re-validation moved from `keyup` to `input`, so paste, autofill, drag-and-drop, speech input and IME composition now clear a stale error.
+- `numberFormat` no longer throws `ReferenceError` when numeral.js is absent.
+
+**Deprecated**
+- `data-validation="complexity"` — use `strength`, ideally with `breached`.
+- `$.fn.validateOnKeyUp` / `$.fn.removeKeyUpValidation` — use `validateOnInput` / `removeInputValidation`.
+
+**Removed**
+- The `placeholder` and `datalist` shims for pre-HTML5 browsers.
+- The IE7 `onreadystatechange` branch in the module loader.
+
+**Tooling**
+- Travis replaced by GitHub Actions: Node 20 and 22 against jQuery 1.12.4, 2.2.4, 3.7.1 and 4.0.0, plus `publint` and `attw`.
+- JSHint replaced by ESLint with a flat config.
+
 #### 2.3.19
 - New translations (Polish, Romanian, Danish, Norwegian, Dutch, Czech, Russian, Italian)
 - Several improvements made to already existing translations
@@ -1361,7 +1531,8 @@ calling $.validate()
 
 ## Development and Testing
 
-The local development and testing suite has been modernized to run on modern Node.js versions (tested and confirmed on **Node.js v26.2.0+**).
+The suite runs on Node 18 and later (`engines.node` is `>=18`). CI tests Node 20 and 22 against jQuery
+1.12.4, 2.2.4, 3.7.1 and 4.0.0.
 
 ### Installation
 
@@ -1370,7 +1541,8 @@ To install all dependencies:
 npm install
 ```
 
-*Note: During installation, the postinstall/prepublish script will automatically download the required headless Chrome binaries into your Puppeteer cache and run the test/build suite.*
+The test suite runs QUnit in headless Chrome through Puppeteer. Puppeteer resolves its own downloaded
+browser; set `CHROME_BIN` or `PUPPETEER_EXECUTABLE_PATH` to point at a different one.
 
 ### Running the Test Suite
 
@@ -1384,14 +1556,43 @@ Or run the default task to start a local test server and watch for file changes:
 npx grunt
 ```
 
+### Linting
+
+```bash
+npm run lint
+```
+
 ### Building the Project
 
-To compile and minify the files for production:
 ```bash
 npx grunt build
 ```
 
-This concatenates the plugins/modules, generates UMD wrappers, minifies CSS, and uglifies the JavaScript files under the `/form-validator` directory.
+`build` runs `concat` → `copy` → `umd` → `cssmin` → `esm` → `dist`: it concatenates the main files (with
+`core-validators.js` last, since it registers rules against the utilities defined before it), copies the
+modules and language files, wraps everything in UMD, minifies the CSS, writes the ES module build to
+`dist/esm/`, and mirrors the result into `dist/`.
+
+**`build` does not minify the JavaScript.** Minification is the separate `uglify` task, and because the
+`dist` mirror step runs before it, `dist` has to be re-run afterwards to pick the minified files up:
+
+```bash
+npx grunt build && npx grunt uglify dist
+```
+
+Without the second command `jquery.form-validator.min.js` is emitted byte-identical to the unminified
+file. `uglify` minifies every built `.js` in place except `jquery.form-validator.js`, which is kept
+readable alongside its `.min.js`.
+
+| Task | What it does |
+| ---- | ------------ |
+| `grunt build` | Everything except minification (see above). |
+| `grunt uglify` | Minify the built JavaScript under `form-validator/`. |
+| `grunt dist` | Mirror `form-validator/` into `dist/`. |
+| `grunt test` | `build`, then ESLint, then the QUnit suite. |
+| `grunt prepublish` | `test` then `uglify`. |
+| `grunt version` | Bump the version; pass `--new-version=3.1.0` to set one. Rebuild afterwards. |
+| `grunt clean` | Delete `form-validator/` and `dist/`. |
 
 
 ## Credits
