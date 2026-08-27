@@ -54,18 +54,28 @@
       }
       return validationErrorMsg;
     },
-    getParentContainer: function ($elem) {
+    getParentContainer: function ($elem, conf) {
       if ($elem.valAttr('error-msg-container')) {
         return $($elem.valAttr('error-msg-container'));
       } else {
-        var $parent = $elem.parent();
+        var $parent = $elem.parent(),
+          $inputGroup;
         if($elem.attr('type') === 'checkbox' && $elem.closest('.checkbox').length) {
           $parent = $elem.closest('.checkbox').parent();
         } else if($elem.attr('type') === 'radio' && $elem.closest('.radio').length) {
           $parent = $elem.closest('.radio').parent();
         }
-        if($parent.closest('.input-group').length) {
-          $parent = $parent.closest('.input-group').parent();
+        $inputGroup = $parent.closest('.input-group');
+        if($inputGroup.length) {
+          // Bootstrap 4 and 5 reveal a message with `.is-invalid ~ .invalid-feedback`,
+          // so it has to stay inside the group to remain a sibling of the control.
+          // Hoisting it out -- which is what Bootstrap 3 wants -- would leave the
+          // message permanently display:none, and the field flagged with no reason
+          // shown. Bootstrap 3 has no such rule, so it keeps the old placement.
+          if ($.formUtils.usesBootstrapValidationApi(conf)) {
+            return $inputGroup;
+          }
+          $parent = $inputGroup.parent();
         }
         return $parent;
       }
@@ -77,7 +87,7 @@
 
       $.formUtils.a11y.markInvalid($input);
 
-      this.getParentContainer($input)
+      this.getParentContainer($input, conf)
         .addClass(conf.inputParentClassOnError)
         .removeClass(conf.inputParentClassOnSuccess);
 
@@ -88,7 +98,7 @@
     applyInputSuccessStyling: function($input, conf) {
       $input.addClass(conf.successElementClass);
       $.formUtils.a11y.clearError($input);
-      this.getParentContainer($input)
+      this.getParentContainer($input, conf)
         .addClass(conf.inputParentClassOnSuccess);
     },
     removeInputStylingAndMessage: function($input, conf) {
@@ -101,7 +111,7 @@
 
       $.formUtils.a11y.clearError($input);
 
-      var $parentContainer = dialogs.getParentContainer($input);
+      var $parentContainer = dialogs.getParentContainer($input, conf);
 
       // Reset parent css
       $parentContainer
@@ -118,6 +128,10 @@
         $parentContainer
           .find('.' + conf.errorMessageClass)
           .remove();
+        // Added alongside the message, so it goes away with it.
+        if ($parentContainer.hasClass('input-group')) {
+          $parentContainer.removeClass('has-validation');
+        }
       }
 
     },
@@ -185,11 +199,20 @@
         }
         addErrorToMessageContainer();
       } else {
-        var $parent = this.getParentContainer($input);
-        $message = $parent.find('.' + conf.errorMessageClass + '.help-block');
+        var $parent = this.getParentContainer($input, conf),
+          inlineClass = conf.inlineErrorMessageClass || '';
+        $message = $parent.find('.' + conf.errorMessageClass + (inlineClass ? '.' + inlineClass : ''));
         if ($message.length === 0) {
-          $message = $('<span></span>').addClass('help-block').addClass(conf.errorMessageClass);
+          $message = $('<span></span>').addClass(conf.errorMessageClass);
+          if (inlineClass) {
+            $message.addClass(inlineClass);
+          }
           $message.appendTo($parent);
+          // Bootstrap 5 needs to know the group has a validation message, or the
+          // control keeps a square right-hand edge where the message now sits.
+          if ($parent.hasClass('input-group')) {
+            $parent.addClass('has-validation');
+          }
         }
         setErrorMessage($message);
       }

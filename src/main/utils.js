@@ -21,6 +21,8 @@
         successElementClass: 'valid', // Class that will be put on elements that has been validated with success
         borderColorOnError: '#b94a48', // Border color of elements which value is invalid, empty string to not change border color
         errorMessageClass: 'form-error', // class name of div containing error messages when validation fails
+        inlineErrorMessageClass: 'help-block', // extra class on an inline message, for the CSS framework to style ('invalid-feedback' on bootstrap 4/5)
+        helpTextClass: 'help-block', // extra class on data-validation-help text ('form-text' on bootstrap 4/5)
         validationRuleAttribute: 'data-validation', // name of the attribute holding the validation rules
         validationErrorMsgAttribute: 'data-validation-error-msg', // define custom err msg inline with element
         errorMessagePosition: 'inline', // Can be either "top" or "inline"

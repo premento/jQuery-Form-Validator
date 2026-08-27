@@ -86,9 +86,12 @@
    * @param {String} attrName - Optional, default is data-help
    * @return {jQuery}
    */
-  $.fn.showHelpOnFocus = function (attrName) {
+  $.fn.showHelpOnFocus = function (attrName, helpTextClass) {
     if (!attrName) {
       attrName = 'data-validation-help';
+    }
+    if (helpTextClass === undefined) {
+      helpTextClass = 'help-block'; // bootstrap 3; 'form-text' from bootstrap 4 on
     }
 
     // Add help text listeners
@@ -112,9 +115,11 @@
               $help = $('<span />')
                 .addClass(className)
                 .addClass('help')
-                .addClass('help-block') // twitter bs
                 .text(help)
                 .hide();
+              if (helpTextClass) {
+                $help.addClass(helpTextClass);
+              }
 
               $elem.after($help);
             }

@@ -124,8 +124,14 @@
    */
   $.validate = function (conf) {
 
+    conf = conf || {};
+
     var defaultConf = $.extend($.formUtils.defaultConfig(), {
       form: 'form',
+      // Which Bootstrap release the page uses, so the right class names are
+      // emitted. Falsy means the Bootstrap 3 era defaults, which is what this
+      // plugin has always shipped. See src/main/bootstrap.js.
+      bootstrap: false,
       validateOnEvent: false,
       novalidate: true, // add novalidate to the form so the browser does not raise its own error bubbles on top of ours
       preferNativeValidation: false, // with the constraint-api module loaded, let the browser answer type/min/max/step/pattern
@@ -142,7 +148,9 @@
       onElementValidate: false
     });
 
-    conf = $.extend(defaultConf, conf || {});
+    // Defaults, then the Bootstrap preset, then the caller's own config -- so an
+    // option passed explicitly always wins over the preset it sits next to.
+    conf = $.extend(defaultConf, $.formUtils.bootstrapPreset(conf.bootstrap), conf);
 
     $(window).trigger('formValidationPluginInit', [conf]);
 
@@ -230,7 +238,7 @@
       .addClass('has-validation-callback');
 
       if (conf.showHelpOnFocus) {
-        $form.showHelpOnFocus();
+        $form.showHelpOnFocus(null, conf.helpTextClass);
       }
       if (conf.addSuggestions) {
         $form.addSuggestions();

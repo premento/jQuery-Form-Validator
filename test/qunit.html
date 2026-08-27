@@ -2182,6 +2182,171 @@
         assert.equal(parse('2000-04-31', 'yyyy-mm-dd'), false, '31 April is still rejected');
       });
 
+      QUnit.module('bootstrap presets');
+
+      QUnit.test('bootstrapPreset resolves a version to a class map', function (assert) {
+        var five = $.formUtils.bootstrapPreset(5);
+        assert.equal(five.errorElementClass, 'is-invalid', 'error class is the bootstrap 5 one');
+        assert.equal(five.successElementClass, 'is-valid', 'success class is the bootstrap 5 one');
+        assert.equal(five.inlineErrorMessageClass, 'invalid-feedback', 'inline message carries invalid-feedback');
+        assert.equal(five.helpTextClass, 'form-text', 'help text uses form-text, not help-block');
+        assert.equal(five.inputParentClassOnError, '', 'has-error is gone in bootstrap 4+');
+        assert.equal(five.inputParentClassOnSuccess, '', 'has-success is gone in bootstrap 4+');
+        assert.equal(five.borderColorOnError, '', 'an inline border-color would beat the bootstrap variable');
+        assert.equal(five.errorMessageClass, undefined,
+          'errorMessageClass is deliberately left alone -- it is the plugin\'s own hook');
+
+        assert.deepEqual($.formUtils.bootstrapPreset(4), five, 'bootstrap 4 shares the preset with 5');
+        assert.equal($.formUtils.bootstrapPreset('5.3.3').inlineErrorMessageClass, 'invalid-feedback',
+          'a full version string resolves on its major');
+      });
+
+      QUnit.test('bootstrapPreset changes nothing for 3, falsy or unknown versions', function (assert) {
+        assert.deepEqual($.formUtils.bootstrapPreset(3), {}, 'the defaults are already bootstrap 3');
+        assert.deepEqual($.formUtils.bootstrapPreset(false), {}, 'false means no preset');
+        assert.deepEqual($.formUtils.bootstrapPreset(), {}, 'and so does omitting it');
+
+        var warnings = [], originalWarn = $.formUtils.warn;
+        $.formUtils.warn = function (msg) { warnings.push(msg); };
+        var bogus = $.formUtils.bootstrapPreset(9);
+        $.formUtils.warn = originalWarn;
+
+        assert.deepEqual(bogus, {}, 'an unknown version changes nothing');
+        assert.equal(warnings.length, 1, 'and says so rather than failing silently');
+      });
+
+      QUnit.test('a caller cannot mutate the shared preset', function (assert) {
+        var mine = $.formUtils.bootstrapPreset(5);
+        mine.errorElementClass = 'tampered';
+        mine.errorMessageTemplate.container = 'tampered';
+        assert.equal($.formUtils.bootstrapPreset(5).errorElementClass, 'is-invalid',
+          'the next caller still gets is-invalid');
+        assert.notEqual($.formUtils.bootstrapPreset(5).errorMessageTemplate.container, 'tampered',
+          'the nested template is copied too');
+      });
+
+      QUnit.test('usesBootstrapValidationApi is true for 4 and 5 only', function (assert) {
+        assert.ok($.formUtils.usesBootstrapValidationApi({bootstrap: 5}), '5 uses is-invalid');
+        assert.ok($.formUtils.usesBootstrapValidationApi({bootstrap: 4}), 'so does 4');
+        assert.ok($.formUtils.usesBootstrapValidationApi({bootstrap: '5.3.3'}), 'full versions too');
+        assert.notOk($.formUtils.usesBootstrapValidationApi({bootstrap: 3}), '3 does not');
+        assert.notOk($.formUtils.usesBootstrapValidationApi({}), 'nor does an unset option');
+        assert.notOk($.formUtils.usesBootstrapValidationApi(), 'nor a missing config');
+      });
+
+      QUnit.test('$.validate layers defaults, then preset, then the caller\'s config', function (assert) {
+        var $form = $('<form id="bs5-layering-form">' +
+          '<div class="mb-3"><input name="x" class="form-control" data-validation="required"></div>' +
+          '</form>').appendTo('body');
+
+        // bootstrap 5 would give this input is-invalid; the explicit option must win.
+        $.validate({
+          form: '#bs5-layering-form',
+          bootstrap: 5,
+          errorElementClass: 'my-own-class'
+        });
+
+        var $input = $form.find('input');
+        $input.trigger('blur');
+
+        assert.ok($input.hasClass('my-own-class'), 'the explicitly configured class is used');
+        assert.notOk($input.hasClass('is-invalid'), 'so the preset value is not applied');
+        assert.ok($form.find('.form-error').hasClass('invalid-feedback'),
+          'options left alone still come from the preset');
+        assert.notOk($form.find('.mb-3').hasClass('has-error'),
+          'and the preset still cleared the bootstrap 3 parent class');
+
+        $form.remove();
+      });
+
+      QUnit.module('bootstrap 5 message rendering');
+
+      // Builds the conf $.validate would produce for a given bootstrap option.
+      function bsConf(version, extra) {
+        return $.extend($.formUtils.defaultConfig(),
+          {bootstrap: version || false},
+          $.formUtils.bootstrapPreset(version),
+          extra || {});
+      }
+
+      QUnit.test('bootstrap 5 puts the bootstrap class on the message beside the plugin hook', function (assert) {
+        var $wrap = $('<div class="mb-3"><input name="bs5a" class="form-control"></div>').appendTo('body'),
+          $input = $wrap.find('input'),
+          conf = bsConf(5);
+
+        $.formUtils.dialogs.setInlineMessage($input, 'Required', conf);
+
+        var $msg = $wrap.find('span');
+        assert.equal($msg.length, 1, 'one message was rendered');
+        assert.ok($msg.hasClass('invalid-feedback'), 'it carries the bootstrap 5 class');
+        assert.ok($msg.hasClass('form-error'), 'and keeps the plugin hook class');
+        assert.notOk($msg.hasClass('help-block'), 'the bootstrap 3 class is not emitted');
+        assert.ok($input.hasClass('is-invalid'), 'the control is flagged the bootstrap 5 way');
+        assert.notOk($wrap.hasClass('has-error'), 'no bootstrap 3 parent class');
+        assert.equal($input.attr('style') || '', '', 'and no inline border-color to fight the framework');
+
+        $wrap.remove();
+      });
+
+      QUnit.test('the default config still renders bootstrap 3 markup', function (assert) {
+        var $wrap = $('<div class="mb-3"><input name="bs3a" class="form-control"></div>').appendTo('body'),
+          $input = $wrap.find('input'),
+          conf = bsConf(false);
+
+        $.formUtils.dialogs.setInlineMessage($input, 'Required', conf);
+
+        var $msg = $wrap.find('span');
+        assert.ok($msg.hasClass('help-block'), 'help-block is still emitted by default');
+        assert.ok($msg.hasClass('form-error'), 'alongside the hook class');
+        assert.notOk($msg.hasClass('invalid-feedback'), 'and not the bootstrap 5 class');
+        assert.ok($input.hasClass('error'), 'the control keeps the old error class');
+        assert.ok($wrap.hasClass('has-error'), 'and the parent keeps has-error');
+
+        $wrap.remove();
+      });
+
+      QUnit.test('an input-group message stays inside the group on bootstrap 5', function (assert) {
+        var $wrap = $('<div class="mb-3"><div class="input-group">' +
+              '<span class="input-group-text">@</span>' +
+              '<input name="bs5g" class="form-control"></div></div>').appendTo('body'),
+          $group = $wrap.find('.input-group'),
+          $input = $wrap.find('input'),
+          conf = bsConf(5);
+
+        $.formUtils.dialogs.setInlineMessage($input, 'Bad address', conf);
+
+        var $msg = $wrap.find('.form-error');
+        assert.equal($msg.closest('.input-group').length, 1,
+          'the message is inside the group, so .is-invalid ~ .invalid-feedback can match it');
+        assert.ok($msg.prevAll('input.is-invalid').length > 0,
+          'and follows the control, which the sibling combinator requires');
+        assert.ok($group.hasClass('has-validation'), 'the group is marked so bootstrap fixes the corners');
+
+        $.formUtils.dialogs.removeInputStylingAndMessage($input, conf);
+        assert.equal($wrap.find('.form-error').length, 0, 'the message is removed again');
+        assert.notOk($group.hasClass('has-validation'), 'and has-validation goes with it');
+
+        $wrap.remove();
+      });
+
+      QUnit.test('an input-group message is still hoisted out on bootstrap 3', function (assert) {
+        var $wrap = $('<div class="mb-3"><div class="input-group">' +
+              '<span class="input-group-addon">@</span>' +
+              '<input name="bs3g" class="form-control"></div></div>').appendTo('body'),
+          $group = $wrap.find('.input-group'),
+          $input = $wrap.find('input'),
+          conf = bsConf(false);
+
+        $.formUtils.dialogs.setInlineMessage($input, 'Bad address', conf);
+
+        var $msg = $wrap.find('.form-error');
+        assert.equal($msg.closest('.input-group').length, 0,
+          'the message sits outside the group, as it always has');
+        assert.notOk($group.hasClass('has-validation'), 'has-validation is a bootstrap 5 concern only');
+
+        $wrap.remove();
+      });
+
         // TODO: Write more tests...
     }
 

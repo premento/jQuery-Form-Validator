@@ -23,6 +23,8 @@ interface JfvErrorMessageTemplate {
   container?: string;
   messages?: string;
   field?: string;
+  /** Used when there is no input to link the message to. */
+  fieldNoLink?: string;
 }
 
 /** A single message returned from the onValidate callback. */
@@ -58,6 +60,25 @@ interface JfvValidationConfig {
   errorMessageTemplate?: JfvErrorMessageTemplate;
   inputParentClassOnError?: string;
   inputParentClassOnSuccess?: string;
+  /**
+   * Extra class placed on an inline error message for the CSS framework to
+   * style. Defaults to "help-block" (Bootstrap 3); the bootstrap 4/5 preset
+   * sets it to "invalid-feedback". Added in 3.0.
+   */
+  inlineErrorMessageClass?: string;
+  /**
+   * Extra class placed on data-validation-help text. Defaults to "help-block"
+   * (Bootstrap 3); the bootstrap 4/5 preset sets it to "form-text".
+   * Added in 3.0.
+   */
+  helpTextClass?: string;
+  /**
+   * Which Bootstrap release the page uses, so the matching class names are
+   * emitted. Falsy (the default) keeps the Bootstrap 3 era names this plugin
+   * has always shipped. Accepts a major version or a full one ("5.3.3").
+   * Options passed explicitly always win over the preset. Added in 3.0.
+   */
+  bootstrap?: 3 | 4 | 5 | string | false;
   /** Apply the success class even to inputs that carried no rule. */
   addValidClassOnAll?: boolean;
 
@@ -250,7 +271,7 @@ interface JfvA11y {
 
 interface JfvDialogs {
   resolveErrorMessage($elem: JQuery, validator: JfvValidator, validatorName: string, conf: JfvValidationConfig, language: JfvLanguageStrings): string;
-  getParentContainer($elem: JQuery): JQuery;
+  getParentContainer($elem: JQuery, conf?: JfvValidationConfig): JQuery;
   applyInputErrorStyling($input: JQuery, conf: JfvValidationConfig): void;
   applyInputSuccessStyling($input: JQuery, conf: JfvValidationConfig): void;
   removeInputStylingAndMessage($input: JQuery, conf: JfvValidationConfig): void;
@@ -270,6 +291,13 @@ interface JfvFormUtils {
   sanitizers: {[name: string]: JfvSanitizer};
   LANG: JfvLanguageStrings;
   a11y: JfvA11y;
+
+  /** Bootstrap class-name presets, keyed by major version. */
+  bootstrapPresets: {[majorVersion: string]: Partial<JfvValidationConfig>};
+  /** Config overlay for a `bootstrap` option value. Unknown versions warn and return {}. */
+  bootstrapPreset(version?: 3 | 4 | 5 | string | false): Partial<JfvValidationConfig>;
+  /** True when the configured Bootstrap version validates via `is-invalid` + `.invalid-feedback` (4 and 5). */
+  usesBootstrapValidationApi(conf?: JfvValidationConfig): boolean;
   dialogs: JfvDialogs;
 
   /** Setting this true during validation stops the form from being submitted. */
@@ -360,7 +388,7 @@ interface JQuery<TElement = HTMLElement> {
   /** Read, set or remove a data-validation-* attribute. */
   valAttr(name: string, val?: string | boolean | null): any;
   willPostponeValidation(): boolean;
-  showHelpOnFocus(attrName?: string): this;
+  showHelpOnFocus(attrName?: string | null, helpTextClass?: string): this;
   addSuggestions(settings?: object): this;
   restrictLength(maxLengthElement: JQuery): this;
 }

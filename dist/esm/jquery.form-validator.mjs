@@ -483,6 +483,140 @@ import jQuery from 'jquery';
 })(jQuery, window);
 
 /**
+ * Bootstrap class-name presets (attached to $.formUtils)
+ *
+ * The class names this plugin has shipped since 2.x are Bootstrap 3 vintage:
+ * `has-error` on the field's parent, `help-block` on the message. Bootstrap 4
+ * removed every one of them, and validates instead through `is-invalid` on the
+ * control itself with a sibling `.invalid-feedback` holding the message.
+ * Bootstrap 5 kept that model.
+ *
+ * Changing the defaults would restyle every existing form, so the newer class
+ * names are opt in:
+ *
+ *   $.validate({ bootstrap: 5 });
+ *
+ * The preset is layered between the defaults and the caller's own config, so an
+ * option passed explicitly always beats the preset.
+ *
+ * @website http://formvalidator.net/
+ * @license MIT
+ */
+(function ($) {
+
+  'use strict';
+
+  /*
+   * Bootstrap 4 and 5 share the validation API, so they share a preset. What
+   * differs between them (`.form-group`, `.custom-control`) is markup the
+   * plugin never emits.
+   */
+  var validationApiPreset = {
+        errorElementClass: 'is-invalid',
+        successElementClass: 'is-valid',
+
+        /*
+         * `errorMessageClass` deliberately keeps its default. It is the hook the
+         * plugin uses to find, update and remove its own messages, and Bootstrap
+         * has no class that plays that role -- `invalid-feedback` is presentation
+         * only. So the Bootstrap class is added to the inline message *alongside*
+         * errorMessageClass rather than replacing it.
+         *
+         * Replacing it would also hide the error summary: `errorMessageTemplate`
+         * interpolates errorMessageClass into the summary container, and
+         * `.invalid-feedback` is `display: none` until an `.is-invalid` sibling
+         * reveals it -- which a summary at the top of a form never has.
+         */
+        inlineErrorMessageClass: 'invalid-feedback',
+
+        /* Bootstrap 4 dropped `help-block` in favour of `form-text`. */
+        helpTextClass: 'form-text',
+
+        /* `has-error` / `has-success` no longer exist. */
+        inputParentClassOnError: '',
+        inputParentClassOnSuccess: '',
+
+        /*
+         * An inline border-color beats `--bs-form-invalid-border-color`, because
+         * an inline style outranks a class. Leaving it set means the field is
+         * outlined in the Bootstrap 3 red while everything else uses the
+         * Bootstrap 5 palette.
+         */
+        borderColorOnError: '',
+
+        errorMessageTemplate: {
+          container: '<div class="{errorMessageClass} alert alert-danger" role="alert">{messages}</div>',
+          /* `mb-0` because the alert already carries the bottom spacing. */
+          messages: '<strong>{errorTitle}</strong><ul class="mb-0">{fields}</ul>',
+          field: '<li><a href="#{id}">{msg}</a></li>',
+          fieldNoLink: '<li>{msg}</li>'
+        }
+      },
+
+      presets = {
+        // The defaults are already Bootstrap 3, so this is a no-op that exists
+        // so `bootstrap: 3` can be stated explicitly.
+        3: {},
+        4: validationApiPreset,
+        5: validationApiPreset
+      },
+
+      majorVersion = function (version) {
+        return parseInt(String(version).split('.')[0], 10);
+      };
+
+  $.formUtils = $.extend($.formUtils || {}, {
+
+    /**
+     * @var {Object} Keyed by Bootstrap major version.
+     */
+    bootstrapPresets: presets,
+
+    /**
+     * Config overlay for a `bootstrap` option value. Accepts a number or a
+     * string, and tolerates a full version (`'5.3.3'`). An unrecognised version
+     * warns and changes nothing, so a typo cannot silently restyle a form.
+     *
+     * @param {Number|String|Boolean} [version]
+     * @return {Object}
+     */
+    bootstrapPreset: function (version) {
+      if (!version) {
+        return {};
+      }
+      var key = majorVersion(version);
+      if (!presets[key]) {
+        $.formUtils.warn('Unknown bootstrap version "' + version +
+          '". Expected 3, 4 or 5 -- carrying on with the default class names.');
+        return {};
+      }
+      // Deep copy so a caller mutating conf cannot reach into the preset and
+      // change it for every later $.validate() call.
+      return $.extend(true, {}, presets[key]);
+    },
+
+    /**
+     * Whether the configured Bootstrap version validates through `is-invalid`
+     * and a sibling `.invalid-feedback`, which is true of 4 and 5 but not 3.
+     * Message placement depends on it: Bootstrap 3 wants the message hoisted
+     * out of an `.input-group`, and 4/5 need it left inside so that it stays a
+     * sibling of the control.
+     *
+     * @param {Object} [conf]
+     * @return {Boolean}
+     */
+    usesBootstrapValidationApi: function (conf) {
+      if (!conf || !conf.bootstrap) {
+        return false;
+      }
+      return majorVersion(conf.bootstrap) >= 4;
+    }
+
+  });
+
+})(jQuery);
+
+/**
  * Deprecated functions and attributes
  * @todo: Remove in release of 3.0
  */
@@ -649,18 +783,28 @@ import jQuery from 'jquery';
       }
       return validationErrorMsg;
     },
-    getParentContainer: function ($elem) {
+    getParentContainer: function ($elem, conf) {
       if ($elem.valAttr('error-msg-container')) {
         return $($elem.valAttr('error-msg-container'));
       } else {
-        var $parent = $elem.parent();
+        var $parent = $elem.parent(),
+          $inputGroup;
         if($elem.attr('type') === 'checkbox' && $elem.closest('.checkbox').length) {
           $parent = $elem.closest('.checkbox').parent();
         } else if($elem.attr('type') === 'radio' && $elem.closest('.radio').length) {
           $parent = $elem.closest('.radio').parent();
         }
-        if($parent.closest('.input-group').length) {
-          $parent = $parent.closest('.input-group').parent();
+        $inputGroup = $parent.closest('.input-group');
+        if($inputGroup.length) {
+          // Bootstrap 4 and 5 reveal a message with `.is-invalid ~ .invalid-feedback`,
+          // so it has to stay inside the group to remain a sibling of the control.
+          // Hoisting it out -- which is what Bootstrap 3 wants -- would leave the
+          // message permanently display:none, and the field flagged with no reason
+          // shown. Bootstrap 3 has no such rule, so it keeps the old placement.
+          if ($.formUtils.usesBootstrapValidationApi(conf)) {
+            return $inputGroup;
+          }
+          $parent = $inputGroup.parent();
         }
         return $parent;
       }
@@ -672,7 +816,7 @@ import jQuery from 'jquery';
 
       $.formUtils.a11y.markInvalid($input);
 
-      this.getParentContainer($input)
+      this.getParentContainer($input, conf)
         .addClass(conf.inputParentClassOnError)
         .removeClass(conf.inputParentClassOnSuccess);
 
@@ -683,7 +827,7 @@ import jQuery from 'jquery';
     applyInputSuccessStyling: function($input, conf) {
       $input.addClass(conf.successElementClass);
       $.formUtils.a11y.clearError($input);
-      this.getParentContainer($input)
+      this.getParentContainer($input, conf)
         .addClass(conf.inputParentClassOnSuccess);
     },
     removeInputStylingAndMessage: function($input, conf) {
@@ -696,7 +840,7 @@ import jQuery from 'jquery';
 
       $.formUtils.a11y.clearError($input);
 
-      var $parentContainer = dialogs.getParentContainer($input);
+      var $parentContainer = dialogs.getParentContainer($input, conf);
 
       // Reset parent css
       $parentContainer
@@ -713,6 +857,10 @@ import jQuery from 'jquery';
         $parentContainer
           .find('.' + conf.errorMessageClass)
           .remove();
+        // Added alongside the message, so it goes away with it.
+        if ($parentContainer.hasClass('input-group')) {
+          $parentContainer.removeClass('has-validation');
+        }
       }
 
     },
@@ -780,11 +928,20 @@ import jQuery from 'jquery';
         }
         addErrorToMessageContainer();
       } else {
-        var $parent = this.getParentContainer($input);
-        $message = $parent.find('.' + conf.errorMessageClass + '.help-block');
+        var $parent = this.getParentContainer($input, conf),
+          inlineClass = conf.inlineErrorMessageClass || '';
+        $message = $parent.find('.' + conf.errorMessageClass + (inlineClass ? '.' + inlineClass : ''));
         if ($message.length === 0) {
-          $message = $('<span></span>').addClass('help-block').addClass(conf.errorMessageClass);
+          $message = $('<span></span>').addClass(conf.errorMessageClass);
+          if (inlineClass) {
+            $message.addClass(inlineClass);
+          }
           $message.appendTo($parent);
+          // Bootstrap 5 needs to know the group has a validation message, or the
+          // control keeps a square right-hand edge where the message now sits.
+          if ($parent.hasClass('input-group')) {
+            $parent.addClass('has-validation');
+          }
         }
         setErrorMessage($message);
       }
@@ -931,9 +1088,12 @@ import jQuery from 'jquery';
    * @param {String} attrName - Optional, default is data-help
    * @return {jQuery}
    */
-  $.fn.showHelpOnFocus = function (attrName) {
+  $.fn.showHelpOnFocus = function (attrName, helpTextClass) {
     if (!attrName) {
       attrName = 'data-validation-help';
+    }
+    if (helpTextClass === undefined) {
+      helpTextClass = 'help-block'; // bootstrap 3; 'form-text' from bootstrap 4 on
     }
 
     // Add help text listeners
@@ -957,9 +1117,11 @@ import jQuery from 'jquery';
               $help = $('<span />')
                 .addClass(className)
                 .addClass('help')
-                .addClass('help-block') // twitter bs
                 .text(help)
                 .hide();
+              if (helpTextClass) {
+                $help.addClass(helpTextClass);
+              }
 
               $elem.after($help);
             }
@@ -1668,8 +1830,14 @@ import jQuery from 'jquery';
    */
   $.validate = function (conf) {
 
+    conf = conf || {};
+
     var defaultConf = $.extend($.formUtils.defaultConfig(), {
       form: 'form',
+      // Which Bootstrap release the page uses, so the right class names are
+      // emitted. Falsy means the Bootstrap 3 era defaults, which is what this
+      // plugin has always shipped. See src/main/bootstrap.js.
+      bootstrap: false,
       validateOnEvent: false,
       novalidate: true, // add novalidate to the form so the browser does not raise its own error bubbles on top of ours
       preferNativeValidation: false, // with the constraint-api module loaded, let the browser answer type/min/max/step/pattern
@@ -1686,7 +1854,9 @@ import jQuery from 'jquery';
       onElementValidate: false
     });
 
-    conf = $.extend(defaultConf, conf || {});
+    // Defaults, then the Bootstrap preset, then the caller's own config -- so an
+    // option passed explicitly always wins over the preset it sits next to.
+    conf = $.extend(defaultConf, $.formUtils.bootstrapPreset(conf.bootstrap), conf);
 
     $(window).trigger('formValidationPluginInit', [conf]);
 
@@ -1774,7 +1944,7 @@ import jQuery from 'jquery';
       .addClass('has-validation-callback');
 
       if (conf.showHelpOnFocus) {
-        $form.showHelpOnFocus();
+        $form.showHelpOnFocus(null, conf.helpTextClass);
       }
       if (conf.addSuggestions) {
         $form.addSuggestions();
@@ -1829,6 +1999,8 @@ import jQuery from 'jquery';
         successElementClass: 'valid', // Class that will be put on elements that has been validated with success
         borderColorOnError: '#b94a48', // Border color of elements which value is invalid, empty string to not change border color
         errorMessageClass: 'form-error', // class name of div containing error messages when validation fails
+        inlineErrorMessageClass: 'help-block', // extra class on an inline message, for the CSS framework to style ('invalid-feedback' on bootstrap 4/5)
+        helpTextClass: 'help-block', // extra class on data-validation-help text ('form-text' on bootstrap 4/5)
         validationRuleAttribute: 'data-validation', // name of the attribute holding the validation rules
         validationErrorMsgAttribute: 'data-validation-error-msg', // define custom err msg inline with element
         errorMessagePosition: 'inline', // Can be either "top" or "inline"

@@ -166,6 +166,74 @@ $.validate({
 
 `fieldNoLink` is used when there is no input to link to. Substitution is single-pass, so a validation message that happens to contain something like `{fields}` is inserted literally rather than treated as a placeholder.
 
+### Bootstrap 4 and 5
+
+The class names this plugin has shipped since 2.x are Bootstrap 3 vintage — `has-error` on the
+field's parent, `help-block` on the message. Bootstrap 4 removed every one of them and validates
+instead through `is-invalid` on the control itself with a sibling `.invalid-feedback` holding the
+message; Bootstrap 5 kept that model. On a Bootstrap 5 page the stock defaults therefore validate
+correctly but render **unstyled** — messages come out as plain body-coloured text, and the invalid
+border is drawn in the old Bootstrap 3 red.
+
+Changing the defaults would restyle every existing form, so the newer class names are opt in:
+
+```js
+$.validate({
+    modules: 'security',
+    bootstrap: 5          // or 4, or a full version such as '5.3.3'
+});
+```
+
+That is the whole change. `bootstrap: 3` is accepted and does nothing, since the defaults are already
+Bootstrap 3, and omitting the option entirely behaves exactly as before.
+
+| Option | Default (Bootstrap 3) | With `bootstrap: 5` |
+| ------ | --------------------- | ------------------- |
+| `errorElementClass` | `'error'` | `'is-invalid'` |
+| `successElementClass` | `'valid'` | `'is-valid'` |
+| `inlineErrorMessageClass` | `'help-block'` | `'invalid-feedback'` |
+| `helpTextClass` | `'help-block'` | `'form-text'` |
+| `inputParentClassOnError` | `'has-error'` | `''` |
+| `inputParentClassOnSuccess` | `'has-success'` | `''` |
+| `borderColorOnError` | `'#b94a48'` | `''` |
+
+The preset is layered between the defaults and your own config, so **an option you pass explicitly
+always wins**:
+
+```js
+$.validate({ bootstrap: 5, errorElementClass: 'my-own-class' });   // your class is used
+```
+
+Three details are worth knowing:
+
+ * **`errorMessageClass` deliberately does not change.** It stays `form-error`, because it is the hook
+   the plugin uses to find, update and remove its own messages, and Bootstrap has no class that plays
+   that role — `invalid-feedback` is presentation only. So an inline message ends up with both:
+   `class="form-error invalid-feedback"`. Setting `errorMessageClass` to `invalid-feedback` yourself is
+   the one thing not to do: `errorMessageTemplate` interpolates it into the error summary container,
+   and `.invalid-feedback` is `display: none` until an `.is-invalid` sibling reveals it — which a
+   summary at the top of a form never has, so the whole summary would silently vanish.
+
+ * **Messages inside an `.input-group` now stay inside it.** Bootstrap 3 wants the message hoisted out
+   of the group; Bootstrap 4 and 5 reveal it with `.is-invalid ~ .invalid-feedback`, so hoisting leaves
+   it permanently `display: none` — the field is flagged with no reason shown. Under `bootstrap: 4`/`5`
+   the message is appended inside the group instead, and `has-validation` is added to it so the
+   control keeps Bootstrap's rounded edge. Both are removed again when the field validates.
+
+ * **Do not load `theme-default.css`.** It styles `input.error`, `div.form-error` and `.help-block`,
+   which would double up on Bootstrap's own validation styling. Bootstrap 5 provides all of it.
+
+`errorMessagePosition: 'top'` needs no extra configuration — the summary renders as a Bootstrap
+`alert alert-danger` and each entry links to its field.
+
+Two helpers are public, for custom renderers that need to make the same distinction:
+`$.formUtils.bootstrapPreset(version)` returns the config overlay for a version, and
+`$.formUtils.usesBootstrapValidationApi(conf)` is true for 4 and 5 but not 3. An unrecognised version
+logs a warning and changes nothing, so a typo cannot silently restyle a form.
+
+See [test/bootstrap5.html](test/bootstrap5.html) for a working page covering inline messages, input
+groups, checkboxes, help text and the error summary.
+
 ### Passwords
 
 > **Breaking.** `data-validation="strength"` scores passwords differently in 3.0. Values that passed before may now be rejected, and vice versa. The attribute, the 0–3 scale and the thresholds are unchanged — only the scoring is. Re-check any form that relies on a particular `data-validation-strength` level.
@@ -610,6 +678,7 @@ complete list as it stands in the source.
 | `observeDynamicFields` | `false` | Watch the form with a `MutationObserver` and wire up fields added after `$.validate()` ran. |
 | `preferNativeValidation` | `false` | With the `native` module loaded, let the browser answer `type`/`min`/`max`/`step`/`pattern`. |
 | `validateHiddenInputs` | `false` | Whether hidden inputs are validated. |
+| `bootstrap` | `false` | Which Bootstrap release the page uses, so the matching class names are emitted: `3`, `4`, `5`, or a full version. See [Bootstrap 4 and 5](#bootstrap-4-and-5). |
 
 ### When validation runs
 
@@ -627,7 +696,9 @@ complete list as it stands in the source.
 | ------ | ------- | ----------- |
 | `errorMessagePosition` | `'inline'` | `'inline'` or `'top'`. `'top'` renders the error summary. |
 | `errorMessageTemplate` | see [Customising the error summary](#customising-the-error-summary) | Markup used to build the summary. Honoured from 3.0. |
-| `errorMessageClass` | `'form-error'` | Class on the element holding an error message. |
+| `errorMessageClass` | `'form-error'` | Class on the element holding an error message. This is the plugin's own hook for finding its messages — see the note under [Bootstrap 4 and 5](#bootstrap-4-and-5) before changing it. |
+| `inlineErrorMessageClass` | `'help-block'` | Extra class on an inline message, for the CSS framework to style. `'invalid-feedback'` under `bootstrap: 4`/`5`. |
+| `helpTextClass` | `'help-block'` | Extra class on `data-validation-help` text. `'form-text'` under `bootstrap: 4`/`5`. |
 | `errorElementClass` | `'error'` | Class applied to an invalid field. |
 | `successElementClass` | `'valid'` | Class applied to a field that validated. |
 | `addValidClassOnAll` | `false` | Apply `successElementClass` even to fields that were not validated. |
@@ -1378,6 +1449,7 @@ Full detail in [What's new in 3.0](#whats-new-in-30). In brief:
 - ES module build (`dist/esm/`), UMD build, subpath exports and bundled TypeScript declarations.
 - Accessibility: `aria-invalid`, `aria-describedby`, `aria-live` messages, `role="alert"` summary, focus management on failed submit, and reduced-motion support. WCAG AA contrast fix in the bundled theme.
 - Module `native` — bridges the Constraint Validation API so `element.validity`, `form.checkValidity()` and `:invalid` agree with your rules.
+- `bootstrap: 4` / `bootstrap: 5` — opt-in class-name preset emitting `is-invalid`, `is-valid`, `invalid-feedback` and `form-text` instead of the Bootstrap 3 names. Bootstrap 3 remains the default. Fixes messages on `.input-group` fields, which Bootstrap 4/5 rendered permanently invisible. See [Bootstrap 4 and 5](#bootstrap-4-and-5).
 - `data-validation="breached"` — screens passwords against Have I Been Pwned over k-anonymity. Opt-in.
 - Whole-sentence message templates with `{0}` placeholders and `Intl.PluralRules` plural forms. All 20 bundled languages carry templates.
 - `localeNumberFormat` sanitizer, and `decimalSeparator: 'auto'`.

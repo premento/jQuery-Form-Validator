@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bootstrap 5 Compatibility Test</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    body { padding: 2rem; }
+    .probe { font: 12px/1.5 monospace; background: #f8f9fa; border: 1px solid #dee2e6; padding: .75rem; white-space: pre; }
+    h2 { margin-top: 2.5rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Bootstrap 5 compatibility</h1>
+  <p class="text-muted">
+    Form A uses <code>$.validate({})</code> — the Bootstrap 3 era defaults.<br>
+    Form B uses <code>$.validate({bootstrap: 5})</code>. Markup is identical.
+  </p>
+
+  <!-- ============ FORM A: default (bootstrap 3) config ============ -->
+  <h2>A — default config (Bootstrap 3 class names)</h2>
+  <form id="form-default" novalidate>
+    <div class="mb-3">
+      <label class="form-label" for="a-text">Text (required)</label>
+      <input type="text" id="a-text" name="a_text" class="form-control" data-validation="required">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="a-email">Email in an input group</label>
+      <div class="input-group">
+        <span class="input-group-text">@</span>
+        <input type="text" id="a-email" name="a_email" class="form-control" data-validation="email">
+      </div>
+    </div>
+    <div class="mb-3">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="a-check" name="a_check" data-validation="required">
+        <label class="form-check-label" for="a-check">Accept</label>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit A</button>
+  </form>
+
+  <!-- ============ FORM B: bootstrap: 5 ============ -->
+  <h2>B — <code>bootstrap: 5</code></h2>
+  <form id="form-bs5" novalidate>
+    <div class="mb-3">
+      <label class="form-label" for="b-text">Text (required)</label>
+      <input type="text" id="b-text" name="b_text" class="form-control" data-validation="required">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="b-email">Email in an input group</label>
+      <div class="input-group">
+        <span class="input-group-text">@</span>
+        <input type="text" id="b-email" name="b_email" class="form-control" data-validation="email">
+      </div>
+    </div>
+    <div class="mb-3">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="b-check" name="b_check" data-validation="required">
+        <label class="form-check-label" for="b-check">Accept</label>
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="b-help">With help text</label>
+      <input type="text" id="b-help" name="b_help" class="form-control"
+             data-validation="required" data-validation-help="Anything at all will do">
+    </div>
+    <button type="submit" class="btn btn-primary">Submit B</button>
+  </form>
+
+  <!-- ============ FORM C: bootstrap 5 + error summary ============ -->
+  <h2>C — <code>bootstrap: 5</code> with <code>errorMessagePosition: 'top'</code></h2>
+  <form id="form-top" novalidate>
+    <div class="mb-3">
+      <label class="form-label" for="c-text">Text (required)</label>
+      <input type="text" id="c-text" name="c_text" class="form-control" data-validation="required">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="c-email">Email</label>
+      <input type="text" id="c-email" name="c_email" class="form-control" data-validation="email">
+    </div>
+    <button type="submit" class="btn btn-primary">Submit C</button>
+  </form>
+
+  <!-- ============ FORM D: explicit override beats the preset ============ -->
+  <h2>D — <code>bootstrap: 5</code> plus an explicit override</h2>
+  <form id="form-override" novalidate>
+    <div class="mb-3">
+      <input type="text" id="d-text" name="d_text" class="form-control" data-validation="required">
+    </div>
+    <button type="submit" class="btn btn-primary">Submit D</button>
+  </form>
+
+  <h2>Probe output</h2>
+  <button class="btn btn-secondary mb-2" id="run">Run probe</button>
+  <div class="probe" id="probe">submit a form, or click "Run probe"</div>
+
+</div>
+
+<script src="../node_modules/jquery/dist/jquery.min.js"></script>
+<script src="../dist/jquery.form-validator.js"></script>
+<script>
+  // Transitions off: Bootstrap animates border-color, and a computed style read
+  // mid-transition reports the old value.
+  document.head.insertAdjacentHTML('beforeend',
+    '<style>*,*::before,*::after{transition:none !important}</style>');
+
+  $.validate({ form: '#form-default' });
+
+  $.validate({ form: '#form-bs5', bootstrap: 5 });
+
+  $.validate({ form: '#form-top', bootstrap: 5, errorMessagePosition: 'top' });
+
+  // The preset sets errorElementClass to 'is-invalid'; an explicit option must win.
+  $.validate({ form: '#form-override', bootstrap: 5, errorElementClass: 'my-own-error-class' });
+
+  function fieldLine(sel) {
+    var el = document.querySelector(sel);
+    var cs = getComputedStyle(el);
+    return '  ' + sel + '\n' +
+      '      class        = ' + JSON.stringify(el.className) + '\n' +
+      '      inline style = ' + JSON.stringify(el.getAttribute('style') || '') + '\n' +
+      '      border-color = ' + cs.borderTopColor + '\n' +
+      '      parent       = ' + JSON.stringify(el.parentElement.className);
+  }
+
+  function msgLines(formSel) {
+    var f = document.querySelector(formSel);
+    var sel = '.form-error, .invalid-feedback, .help-block';
+    var out = [];
+    f.querySelectorAll(sel).forEach(function (m) {
+      var cs = getComputedStyle(m);
+      out.push('  message ' + JSON.stringify(m.className) + '\n' +
+        '      in           = ' + JSON.stringify(m.parentElement.className) + '\n' +
+        '      text         = ' + JSON.stringify((m.textContent || '').trim().slice(0, 34)) + '\n' +
+        '      display      = ' + cs.display + ', color ' + cs.color + ', ' + cs.fontSize + '\n' +
+        '      VISIBLE      = ' + (cs.display !== 'none' && m.offsetHeight > 0));
+    });
+    return out.length ? out.join('\n') : '  (no message elements)';
+  }
+
+  function summaryLine(formSel) {
+    var s = document.querySelector(formSel + ' .alert');
+    if (!s) { return '  (no summary rendered)'; }
+    var cs = getComputedStyle(s);
+    return '  summary ' + JSON.stringify(s.className) + '\n' +
+      '      display      = ' + cs.display + '\n' +
+      '      VISIBLE      = ' + (cs.display !== 'none' && s.offsetHeight > 0) + '\n' +
+      '      links        = ' + s.querySelectorAll('a').length;
+  }
+
+  function probe() {
+    var L = [];
+    L.push('=== A  default config (bootstrap 3 names) ===');
+    L.push(fieldLine('#a-text'));
+    L.push(msgLines('#form-default'));
+    L.push('');
+    L.push('=== B  bootstrap: 5 ===');
+    L.push(fieldLine('#b-text'));
+    L.push(fieldLine('#b-email'));
+    L.push('      input-group has-validation = ' +
+      document.querySelector('#b-email').closest('.input-group').classList.contains('has-validation'));
+    L.push(msgLines('#form-bs5'));
+    L.push('');
+    L.push('=== C  bootstrap: 5 + summary on top ===');
+    L.push(summaryLine('#form-top'));
+    L.push('');
+    L.push('=== D  explicit override beats preset ===');
+    L.push('  #d-text class = ' + JSON.stringify(document.querySelector('#d-text').className));
+    document.getElementById('probe').textContent = L.join('\n');
+  }
+
+  document.getElementById('run').addEventListener('click', probe);
+  $('form').on('submit', function () { setTimeout(probe, 30); });
+</script>
+</body>
+</html>
