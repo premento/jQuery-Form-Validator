@@ -1,10 +1,15 @@
-# jQuery Form Validator [DISCONTINUED]
+# jQuery Form Validator
 
-*Validation framework that let's you configure, rather than code, your validation logic.*
+*Validation framework that lets you configure, rather than code, your validation logic.*
 
-I started writing this plugin back in 2009 and it has given me much joy over the years. But all good things must come to an end and now it's time for this plugin to pull in its oars and go down with history.
+**This project is actively maintained.** Validation rules live in your markup as `data-validation`
+attributes, so the HTML stays readable and the JavaScript stays out of it. Validators are grouped
+into modules, so a page loads only the rules it actually uses.
 
-**Upstream development stopped, and the notice above is the original author's.** This 3.0 release comes from a fork that resumed the work. jQuery 1.8 through 4.0 are supported, and every release is tested against 1.12.4, 2.2.4, 3.7.1 and 4.0.0 in CI — see [What's new in 3.0](#whats-new-in-30).
+jQuery 1.8 through 4.0 are supported, and every release is tested against 1.12.4, 2.2.4, 3.7.1 and
+4.0.0 on Node 20 and 22 in CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)). See
+[What's new in 3.0](#whats-new-in-30) for the accessibility, password and localisation work, and
+the [changelog](#changelog) for the 4.x releases.
 
 <!-- Travis was retired in 3.0; CI runs in GitHub Actions (.github/workflows/ci.yml). -->
 
@@ -476,8 +481,6 @@ Read the documentation for this module at [/#logic](#logic)
 * **bic** — *validate a Bank Identifier Code*
 * **sepa** — *validate an IBAN that belongs to the SEPA area*
 
-Read the documentation for this module at [http://formvalidator.net/#sepa](http://www.formvalidator.net/#sepa)
-
 
 ### Module: sweden
  * **swesec** — *validate swedish social security number*
@@ -488,14 +491,10 @@ Read the documentation for this module at [http://formvalidator.net/#sepa](http:
  * Suggest county
  * Suggest municipality
 
-Read the documentation for the Swedish module at [http://formvalidator.net/#sweden-validators](http://www.formvalidator.net/#country-specific-validators_sweden)
-
 ### Module: uk
  * **ukvatnumber**
  * **uknin**
  * **ukutr**
-
-Read the documentation for the UK module at [http://formvalidator.net/#uk-validators](http://www.formvalidator.net/#country-specific-validators_uk)
 
 ### Module: brazil
  * **brphone** — *Validate a brazilian telephone number*
@@ -573,8 +572,6 @@ Attributes not prefixed with `data-validation` may also be declared here.
  * **numberFormat**  — Declare the attribute data-sanitize-number-format with any of the formats described on http://numeraljs.com/. Note that this rule requires that numeral.js is included in the page. As of 3.0 numeral is genuinely optional — without it the value degrades to having grouping characters stripped instead of throwing
  * **localeNumberFormat**  — *New in 3.0.* Format through `Intl.NumberFormat`, no third-party dependency. See [Numbers](#numbers)
 
-Read the documentation for the sanitation module at [http://formvalidator.net/#data-sanitation](http://formvalidator.net/#data-sanitation)
-
 
 ## Writing a custom validator
 You can use the function `$.formUtils.addValidator()` to add your own validation function. Here's an example of a validator
@@ -616,7 +613,7 @@ that checks if the input contains an even number.
 *errorMessageKey* - Name of language property that is used in case the value of the input is invalid.
 
 *errorMessage* - An alternative error message that is used if errorMessageKey is left with an empty value or isn't defined
-in the language object. Note that you also can use [inline error messages](http://formvalidator.net/#localization) in your form.
+in the language object. Note that you also can use [inline error messages](#localization) in your form.
 
 
 The validation function takes these five arguments:
@@ -661,9 +658,8 @@ It is possible to display help information for each input. The information will 
 
 ## Fully customizable
 
-Every option below is passed to `$.validate()`. The narrative documentation lives at
-[http://formvalidator.net/#configuration](http://formvalidator.net/#configuration); this table is the
-complete list as it stands in the source.
+Every option below is passed to `$.validate()`. This table is the complete list as it stands in
+the source.
 
 ### Setup
 
@@ -753,7 +749,7 @@ import 'jquery-form-validator/lang/sv';   // or registered up front, no request
 
 You can also override individual messages with the `language` option instead of loading a file — see
 [Messages and localisation](#messages-and-localisation) for the 3.0 sentence templates and plural
-forms. Here you can read more about [localization](http://formvalidator.net/#localization)
+forms. Here you can read more about [localization](#localization)
 
 # Default validators
 
@@ -962,7 +958,7 @@ You can tell any validator to ignore certain characters by using the attribute d
 </p>
 ```
 
-## Security validators<
+## Security validators
 
 ### Password confirmation
 
@@ -1437,6 +1433,28 @@ Use the attribute <code>data-validation-optional-if-answered</code> to tell the 
 
 ## Changelog
 
+#### 4.0.1
+
+- Project metadata now points at this repository: author, homepage, repository and issue tracker.
+- Added a `LICENSE` file. The project ships MIT; until now the licence existed only as `@license`
+  banners in the source with no accompanying notice.
+- Removed `formvalidator.jquery.json`. It was the manifest for the jQuery Plugin Registry, which has
+  been read-only since 2017, and it had been left behind at version 2.3.79.
+- Documentation links that pointed off-site now point at the corresponding README section.
+- `package.json` had been left at `3.0.0` through the 4.0.0 release; the version is now in step with
+  the tag, so built banners and npm metadata report it correctly.
+
+#### 4.0.0
+
+- Bootstrap 4 and 5 support via the opt-in `bootstrap: 4` / `bootstrap: 5` option, which swaps the
+  Bootstrap 3 class names (`has-error`, `help-block`) for the validation API those versions use
+  (`is-invalid`, `invalid-feedback`). Omitting the option changes nothing. See
+  [Bootstrap 4 and 5](#bootstrap-4-and-5).
+- Inline messages inside an `.input-group` now stay inside it under Bootstrap 4/5, where hoisting
+  them out would leave them permanently `display: none`.
+- `$.formUtils.bootstrapPreset(version)` and `$.formUtils.usesBootstrapValidationApi(conf)` are
+  public, for custom renderers that need the same distinction.
+
 #### 3.0.0
 
 Full detail in [What's new in 3.0](#whats-new-in-30). In brief:
@@ -1483,14 +1501,12 @@ Full detail in [What's new in 3.0](#whats-new-in-30). In brief:
 - Several improvements made to already existing translations
 - "Validation help" no longer puts constraints on input names
 - Improved confirmation validation
-- Config parameter `errorMessagePosition` is now only used to point out where error message should be placed. New configuration parameters is introduced that handles custom positioning of error messages [#226](https://github.com/victorjonsson/jQuery-Form-Validator/issues/226#issuecomment-191233456)
 - Now possible to add `data-validation-ignore` to filter out certain characters before validation
 - New sanitation method `strip` that removes defined characters
 - Now possible to declare attributes not prefixed with data-validation in jsconf module
 - All inputs gets sanitized on page load when using sanitation module
 - Allow dates to omit leading zero using `data-validation-require-leading-zero="false"`
 - Module toggleDisabled now acts on value change, not only mouse click
-- `data-validation-if-checked` now deprecated, use `data-validation-depends-on` instead [#153](https://github.com/victorjonsson/jQuery-Form-Validator/issues/153)
 - Event `beforeValidation` now gets value, language and configuration as arguments and can be used to prevent validation of the input.
 - Security module now has a `recaptcha` validator that uses Google reCaptcha 2
 - The plugin is installable using npm (also possible to require validation modules when using browserify)
@@ -1512,7 +1528,7 @@ Full detail in [What's new in 3.0](#whats-new-in-30). In brief:
 #### 2.2.43
 - Fixed min/max parse error in HTML5 module
 - Now also supports Twitter bootstraps horizontal forms
-- This plugin now also distributes a default CSS theme including success/fail icons (used on formvalidator.net)
+- This plugin now also distributes a default CSS theme including success/fail icons
 - Email validation now won't fail if email begins with a number
 - This plugin now comes with error dialogs translated to English, French, German, Spanish and English.
 - New validator `letternumeric`. Validates that input consists out of any type of letter (not only alphanumeric) and/or numbers
@@ -1550,7 +1566,7 @@ of validation that should be applied.
 
 #### 2.1.34
 * General improvements and bug fixes
-* Added events "beforeValidation" and "validation" (see http://formvalidator.net/#configuration_callbacks for more info)
+* Added events "beforeValidation" and "validation" (see [Callbacks](#callbacks) for more info)
 
 #### 2.1.27
  * E-mail validation support .eu top domain
@@ -1597,7 +1613,7 @@ calling $.validate()
  * The attribute to be used when defining the regular expression for custom validations is now moved to its own attribute (data-validation-regexp)
  * Length validation now looks at attribute data-validation-length (eg. min5, max200, 3-12).
  * The validation rule no longer needs to be prefixed with "validate_" (it's still possible to use the prefix but it's considered deprecated).
- * Some validation functions is moved to modules (see the function reference over at http://formvalidator.net).
+ * Some validation functions is moved to modules (see the module reference above).
  * Added function $.validationSetup() to reduce the amount of code that has to be written when initiating the form validation.
 
 
@@ -1669,4 +1685,10 @@ readable alongside its `.min.js`.
 
 ## Credits
 
-http://www.formvalidator.net/#credits
+Maintained by [Premento](https://github.com/premento) at
+[https://github.com/premento/jQuery-Form-Validator](https://github.com/premento/jQuery-Form-Validator).
+
+Individual modules carry their contributor in the file header — among them
+[brazil.js](src/modules/brazil.js) (Eduardo Cuducos), [color.js](src/modules/color.js) (dszymczuk)
+and [poland.js](src/modules/poland.js) (simivar). Bug reports and pull requests are welcome on the
+[issue tracker](https://github.com/premento/jQuery-Form-Validator/issues).

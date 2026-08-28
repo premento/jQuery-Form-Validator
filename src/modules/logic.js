@@ -1,12 +1,11 @@
 /**
  * jQuery Form Validator Module: Logic
  * ------------------------------------------
- * Created by Victor Jonsson <http://www.victorjonsson.se>
  *
  * - data-validation-depends-on
  * - data-validation-if-answered
  *
- * @website http://formvalidator.net/#logic
+ * @website https://github.com/premento/jQuery-Form-Validator#module-logic
  * @license MIT
  */
 (function($) {

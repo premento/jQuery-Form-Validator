@@ -15,7 +15,7 @@
  *     pattern can be answered by the browser rather than by a hand written
  *     regular expression.
  *
- * @website http://formvalidator.net/
+ * @website https://github.com/premento/jQuery-Form-Validator
  * @license MIT
  */
 (function ($) {

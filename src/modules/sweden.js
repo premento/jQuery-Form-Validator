@@ -1,7 +1,6 @@
 /**
- * jQuery Form Validator Module: Security
+ * jQuery Form Validator Module: Sweden
  * ------------------------------------------
- * Created by Victor Jonsson <http://www.victorjonsson.se>
  *
  * This form validation module adds validators typically used on swedish
  * websites. This module adds the following validators:
@@ -11,7 +10,7 @@
  *  - validate_county
  *  - validate_swephone
  *
- * @website http://formvalidator.net/#swedish-validators
+ * @website https://github.com/premento/jQuery-Form-Validator#module-sweden
  * @license MIT
  */
 (function ($, window) {

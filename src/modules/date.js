@@ -1,14 +1,13 @@
 /**
  * jQuery Form Validator Module: Date
  * ------------------------------------------
- * Created by Victor Jonsson <http://www.victorjonsson.se>
- * Documentation and issue tracking on Github <https://github.com/victorjonsson/jQuery-Form-Validator/>
+ * Documentation and issue tracking on Github <https://github.com/premento/jQuery-Form-Validator>
  *
  * The following validators will be added by this module:
  *  - Time (HH:mmm)
  *  - Birth date
  *
- * @website http://formvalidator.net/#location-validators
+ * @website https://github.com/premento/jQuery-Form-Validator#module-date
  * @license MIT
  */
 (function ($) {

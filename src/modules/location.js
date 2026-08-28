@@ -1,14 +1,13 @@
 /**
  * jQuery Form Validator Module: Date
  * ------------------------------------------
- * Created by Victor Jonsson <http://www.victorjonsson.se>
  *
  * The following validators will be added by this module:
  *  - Country
  *  - US state
  *  - longitude and latitude
  *
- * @website http://formvalidator.net/#location-validators
+ * @website https://github.com/premento/jQuery-Form-Validator#module-location
  * @license MIT
  */
 (function ($) {

@@ -1,7 +1,6 @@
 /**
  * jQuery Form Validator Module: Security
  * ------------------------------------------
- * Created by Victor Jonsson <http://victorjonsson.se>
  *
  * This module adds validators typically used in registration forms.
  * This module adds the following validators:
@@ -12,7 +11,7 @@
  *  - credit card
  *  - cvv
  *
- * @website http://formvalidator.net/#security-validators
+ * @website https://github.com/premento/jQuery-Form-Validator#module-security
  * @license MIT
  */
 (function ($, window) {

@@ -1,7 +1,6 @@
 /**
  * jQuery Form Validator Module: UK
  * ------------------------------------------
- * Created by Victor Jonsson <http://www.victorjonsson.se>
  *
  * This form validation module adds validators typically used on
  * websites in the UK. This module adds the following validators:
@@ -9,7 +8,7 @@
  *  - ukutr
  *  - uknin
  *
- * @website http://formvalidator.net/#uk-validators
+ * @website https://github.com/premento/jQuery-Form-Validator#module-uk
  * @license MIT
  */
 (function($) {

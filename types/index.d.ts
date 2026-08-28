@@ -1,5 +1,5 @@
-// Type definitions for jquery-form-validator 3.x
-// Project: http://formvalidator.net/
+// Type definitions for jquery-form-validator 4.x
+// Project: https://github.com/premento/jQuery-Form-Validator
 //
 // Hand written rather than generated: the source is plain JavaScript, and the
 // plugin exports nothing -- it augments the jQuery namespace as a side effect.

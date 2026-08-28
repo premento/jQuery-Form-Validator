@@ -1,7 +1,7 @@
 {
   "name": "jquery-form-validator",
   "description": "With this feature rich jQuery plugin it becomes easy to validate user input while keeping your HTML markup clean from javascript code. Even though this plugin has a wide range of validation functions it's designed to require as little bandwidth as possible. This is achieved by grouping together validation functions in \"modules\", making it possible for the programmer to load only those functions that's needed to validate a particular form.",
-  "version": "3.0.0",
+  "version": "4.0.1",
   "main": "./dist/jquery.form-validator.min.js",
   "keywords": [
     "form",
@@ -10,17 +10,17 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/victorjonsson/jQuery-Form-Validator.git"
+    "url": "git+https://github.com/premento/jQuery-Form-Validator.git"
   },
   "bugs": {
-    "url": "https://github.com/victorjonsson/jQuery-Form-Validator/issues"
+    "url": "https://github.com/premento/jQuery-Form-Validator/issues"
   },
   "author": {
-    "name": "Victor Jonsson",
-    "email": "kontakt@victorjonsson.se",
-    "url": "http://victorjonsson.se"
+    "name": "Premento",
+    "email": "anish@locatenow.ai",
+    "url": "https://github.com/premento"
   },
-  "homepage": "http://formvalidator.net/",
+  "homepage": "https://github.com/premento/jQuery-Form-Validator",
   "license": "MIT",
   "devDependencies": {
     "grunt": "^1.6.2",
@@ -95,7 +95,8 @@
     "form-validator",
     "types",
     "src",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "type": "commonjs",
   "engines": {

@@ -1,7 +1,6 @@
 /**
  * jQuery Form Validator Module: File
  * ------------------------------------------
- * Created by Victor Jonsson <http://www.victorjonsson.se>
  *
  * The following validators will be added by this module:
  *  - mime type
@@ -10,7 +9,7 @@
  *
  * @todo, Use $.formUtils.asyncValidation in "dimension" validator
  *
- * @website http://formvalidator.net/#file-validators
+ * @website https://github.com/premento/jQuery-Form-Validator#module-file
  * @license MIT
  */
 (function($, window) {

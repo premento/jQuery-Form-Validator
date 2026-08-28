@@ -5,7 +5,7 @@
  *
  * Farsi language package
  *
- * @website http://formvalidator.net/
+ * @website https://github.com/premento/jQuery-Form-Validator
  * @license MIT
  * @version 0.0.1
  */

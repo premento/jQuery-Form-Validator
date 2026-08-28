@@ -1,7 +1,6 @@
 /**
  * jQuery Form Validator Module: html5
  * ------------------------------------------
- * Created by Victor Jonsson <http://www.victorjonsson.se>
  *
  * Translates HTML5 validation attributes into this plugin's own rules, so
  * that markup written for the browser is validated with the same messages and
@@ -18,7 +17,7 @@
  *
  * The placeholder and datalist shims for pre-HTML5 browsers were removed in 3.0.
  *
- * @website http://formvalidator.net/
+ * @website https://github.com/premento/jQuery-Form-Validator
  * @license MIT
  */
 (function ($) {

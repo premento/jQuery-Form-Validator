@@ -7,7 +7,7 @@
  * websites in Poland. This module adds the following validators:
  *  - plpesel
  *
- * @website http://formvalidator.net/#poland-validators
+ * @website https://github.com/premento/jQuery-Form-Validator#module-poland
  * @license MIT
  */
 (function($) {

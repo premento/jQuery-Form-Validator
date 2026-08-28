@@ -1,11 +1,10 @@
 /**
  * jQuery Form Validator Module: JSconf
  * ------------------------------------------
- * Created by Victor Jonsson <http://www.victorjonsson.se>
  *
  * This module makes it possible to configure form validation using javascript
  *
- * @website http://formvalidator.net/#location-validators
+ * @website https://github.com/premento/jQuery-Form-Validator#module-jsconf
  * @license MIT
  */
 (function($) {

@@ -1,12 +1,11 @@
 /**
  * jQuery Form Validator Module: Toggle Disabled
  * ------------------------------------------
- * Created by Victor Jonsson <http://www.victorjonsson.se>
  *
  * This module will take care of disabling/enabling submit buttons
  * in forms, depending on if the inputs of the form is valid or not.
  *
- * @website http://formvalidator.net/
+ * @website https://github.com/premento/jQuery-Form-Validator
  * @license MIT
  */
 (function($, window, undefined) {

@@ -4,7 +4,7 @@
  *
  * Danish language package
  *
- * @website http://formvalidator.net/
+ * @website https://github.com/premento/jQuery-Form-Validator
  * @license MIT
  */
 (function($, window) {

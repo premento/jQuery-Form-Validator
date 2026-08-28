@@ -9,7 +9,7 @@
  *  - cep
  *  - brphone
  *
- * @website http://formvalidator.net/#brazil-validators
+ * @website https://github.com/premento/jQuery-Form-Validator#module-brazil
  * @license MIT
  */
 (function($) {

@@ -15,7 +15,7 @@
  * The preset is layered between the defaults and the caller's own config, so an
  * option passed explicitly always beats the preset.
  *
- * @website http://formvalidator.net/
+ * @website https://github.com/premento/jQuery-Form-Validator
  * @license MIT
  */
 (function ($) {

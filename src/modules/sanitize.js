@@ -1,7 +1,6 @@
 /**
  * jQuery Form Validator Module: sanitize
  * ------------------------------------------
- * Created by Victor Jonsson <http://www.victorjonsson.se>
  *
  * This module makes it possible to add sanitation functions to
  * inputs. The functions is triggered on blur. Example:
@@ -21,7 +20,7 @@
  *  - strip
  *  - escape (replace <, >, &, ' and " with HTML entities)
  *
- * @website http://formvalidator.net/
+ * @website https://github.com/premento/jQuery-Form-Validator
  * @license MIT
  */
 (function($, window) {

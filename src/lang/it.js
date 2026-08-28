@@ -4,7 +4,7 @@
  *
  * Italian language package
  *
- * @website http://formvalidator.net/
+ * @website https://github.com/premento/jQuery-Form-Validator
  * @license MIT
  * @version 2.2.163
  */

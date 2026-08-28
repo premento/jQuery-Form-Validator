@@ -194,7 +194,6 @@ module.exports = function (grunt) {
 
     replaceInFile('package.json', '"version": "' + currentVersion + '"',
       '"version": "' + newVersion + '"');
-    replaceInFile('formvalidator.jquery.json', '"version": "' + currentVersion + '"', '"version": "' + newVersion + '"');
 
     // Set new version globally (can later on be used by concat/uglify)
     pkg.version = newVersion;
