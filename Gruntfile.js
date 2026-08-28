@@ -275,9 +275,15 @@ module.exports = function (grunt) {
     grunt.log.writeln('>> ' + count + ' files mirrored to ' + PKG_DIR);
   });
 
-  grunt.registerTask("build-production", ["version", "test", "uglify"]);
+  /*
+   * 'dist' has to run again after 'uglify'. 'build' mirrors ./form-validator into
+   * ./dist before anything is minified, so a pipeline that ends at 'uglify' leaves
+   * ./dist/jquery.form-validator.min.js -- the package main -- as a byte-for-byte
+   * copy of the unminified file.
+   */
+  grunt.registerTask("build-production", ["version", "test", "uglify", "dist"]);
   grunt.registerTask('build', ['concat', 'copy', 'umd', 'cssmin', 'esm', 'dist']);
   grunt.registerTask('test', ['build', 'eslint', 'qunit']);
   grunt.registerTask("default", ["test", "connect", "watch"]);
-  grunt.registerTask("prepublish", ["test", "uglify"]);
+  grunt.registerTask("prepublish", ["test", "uglify", "dist"]);
 };

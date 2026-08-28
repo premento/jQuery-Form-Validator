@@ -6,12 +6,9 @@
 attributes, so the HTML stays readable and the JavaScript stays out of it. Validators are grouped
 into modules, so a page loads only the rules it actually uses.
 
-jQuery 1.8 through 4.0 are supported, and every release is tested against 1.12.4, 2.2.4, 3.7.1 and
-4.0.0 on Node 20 and 22 in CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)). See
-[What's new in 3.0](#whats-new-in-30) for the accessibility, password and localisation work, and
-the [changelog](#changelog) for the 4.x releases.
-
-<!-- Travis was retired in 3.0; CI runs in GitHub Actions (.github/workflows/ci.yml). -->
+jQuery 1.8 through 4.0 are supported. See [What's new in 3.0](#whats-new-in-30) for the
+accessibility, password and localisation work, and the [changelog](#changelog) for the 4.x
+releases.
 
 [![npm version](https://badge.fury.io/js/jquery-form-validator.svg)](https://www.npmjs.com/package/jquery-form-validator)
 
@@ -353,7 +350,7 @@ The existing `numberFormat` sanitizer still uses [numeral.js](http://numeraljs.c
 
 ### Build and CI
 
- * Travis (pinned to Node 4.2.4, and long dead for open source) is replaced by GitHub Actions, testing Node 20 and 22 against jQuery 1.12.4, 2.2.4, 3.7.1 and 4.0.0, plus a job running `publint` and `attw` on the package.
+ * Travis (pinned to Node 4.2.4, and long dead for open source) was replaced by GitHub Actions, testing Node 20 and 22 against jQuery 1.12.4, 2.2.4, 3.7.1 and 4.0.0, plus a job running `publint` and `attw` on the package. *Hosted CI was removed again in 4.0.1; the same checks run locally through `grunt test`, `publint` and `attw`.*
  * JSHint is replaced by ESLint with a flat config. The old `onevar` rule, which required a single `var` statement per function, is gone — no code in this project was written that way.
  * `grunt test` no longer depends on a browser path hardcoded to one machine; set `CHROME_BIN` or let puppeteer resolve its own.
 
@@ -1443,6 +1440,8 @@ Use the attribute <code>data-validation-optional-if-answered</code> to tell the 
 - Documentation links that pointed off-site now point at the corresponding README section.
 - `package.json` had been left at `3.0.0` through the 4.0.0 release; the version is now in step with
   the tag, so built banners and npm metadata report it correctly.
+- Removed the GitHub Actions workflow. The test matrix it ran is reproducible locally — see
+  [Development and Testing](#development-and-testing).
 
 #### 4.0.0
 
@@ -1619,8 +1618,13 @@ calling $.validate()
 
 ## Development and Testing
 
-The suite runs on Node 18 and later (`engines.node` is `>=18`). CI tests Node 20 and 22 against jQuery
-1.12.4, 2.2.4, 3.7.1 and 4.0.0.
+The suite runs on Node 18 and later (`engines.node` is `>=18`). There is no hosted CI; run the suite
+locally before releasing. To check a specific jQuery version, install it without saving and run the
+suite again — 1.12.4, 2.2.4, 3.7.1 and 4.0.0 are the supported set:
+
+```bash
+npm install --no-save jquery@1.12.4 && npx grunt test
+```
 
 ### Installation
 
@@ -1670,7 +1674,8 @@ npx grunt build && npx grunt uglify dist
 
 Without the second command `jquery.form-validator.min.js` is emitted byte-identical to the unminified
 file. `uglify` minifies every built `.js` in place except `jquery.form-validator.js`, which is kept
-readable alongside its `.min.js`.
+readable alongside its `.min.js`. `prepublish` and `build-production` chain the three steps in the
+right order for you, so a release never ships an unminified `main`.
 
 | Task | What it does |
 | ---- | ------------ |
@@ -1678,8 +1683,8 @@ readable alongside its `.min.js`.
 | `grunt uglify` | Minify the built JavaScript under `form-validator/`. |
 | `grunt dist` | Mirror `form-validator/` into `dist/`. |
 | `grunt test` | `build`, then ESLint, then the QUnit suite. |
-| `grunt prepublish` | `test` then `uglify`. |
-| `grunt version` | Bump the version; pass `--new-version=3.1.0` to set one. Rebuild afterwards. |
+| `grunt prepublish` | `test`, then `uglify`, then `dist` again so the mirror holds the minified files. |
+| `grunt version` | Bump the version; pass `--new-version=4.1.0` to set one. Rebuild afterwards. |
 | `grunt clean` | Delete `form-validator/` and `dist/`. |
 
 
