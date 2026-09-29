@@ -33,7 +33,8 @@
     if (btn) {
       var dark = theme === 'dark' ||
         (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      btn.textContent = dark ? '☀' : '☾';
+      // Which icon shows is decided in CSS; only the label changes here, so
+      // the SVG markup is never rewritten.
       btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
     }
   }
@@ -265,6 +266,14 @@
 
   function initScrollableCode() {
     syncScrollableCode();
+
+    // Run again once the webfonts land. The bundled mono is wider than the
+    // fallback, so a block that fitted at first paint can start overflowing
+    // when the real font swaps in -- and it would then scroll with no way to
+    // reach it from the keyboard.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(syncScrollableCode);
+    }
 
     var pending = null;
     window.addEventListener('resize', function () {

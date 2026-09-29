@@ -8,9 +8,9 @@ Open `index.html` in a browser. That works straight from disk — there is no bu
 step, no bundler, and no server required.
 
 Nothing here reaches the network: every asset path is relative, there are no
-module scripts and no `fetch()` calls, and jQuery and the plugin are vendored
-into `assets/vendor/`. The search index is a plain script rather than JSON for
-exactly this reason — `fetch()` of a sibling file is blocked over `file://`.
+module scripts and no `fetch()` calls, and jQuery, the plugin and both webfonts
+are vendored into `assets/`. The search index is a plain script rather than JSON
+for exactly this reason — `fetch()` of a sibling file is blocked over `file://`.
 
 One caveat: some browsers refuse `localStorage` on `file://`, so the theme
 choice may not persist between reloads. Every access is wrapped, so the page
@@ -51,6 +51,7 @@ docs/
     ├── js/docs.js          Theme, nav, search, TOC, highlighting
     ├── js/demos.js         Wiring for the live demos
     ├── js/search-index.js  Generated search index
+    ├── fonts/              Inter + JetBrains Mono, self-hosted (SIL OFL)
     └── vendor/             jQuery and the built plugin, for the demos
 ```
 
@@ -66,6 +67,8 @@ Two things are worth knowing:
   jQuery, so `examples.html` can run the real thing without reaching outside this
   folder. `grunt build` refreshes them, via the `docs-assets` task — do not edit
   them by hand.
+- **`assets/fonts/` is vendored.** Inter and JetBrains Mono, latin subset, both
+  SIL OFL 1.1. See `assets/fonts/LICENSE.md` for the refresh command.
 
 ## Keeping the demos honest
 
