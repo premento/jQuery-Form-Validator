@@ -281,9 +281,41 @@ module.exports = function (grunt) {
    * ./dist/jquery.form-validator.min.js -- the package main -- as a byte-for-byte
    * copy of the unminified file.
    */
-  grunt.registerTask("build-production", ["version", "test", "uglify", "dist"]);
-  grunt.registerTask('build', ['concat', 'copy', 'umd', 'cssmin', 'esm', 'dist']);
+  grunt.registerTask('docs-assets', 'Refresh the copies of jQuery and the plugin that the docs demos run on', function () {
+    var path = require('path'),
+      vendor = './docs/assets/vendor',
+      pluginDir = vendor + '/form-validator',
+      jquerySrc = './node_modules/jquery/dist/jquery.min.js';
+
+    if (!fs.existsSync('./docs')) {
+      grunt.log.writeln('No ./docs directory; nothing to refresh.');
+      return;
+    }
+
+    grunt.file.mkdir(pluginDir + '/lang');
+
+    // The live demos on docs/examples.html load these, so a stale copy would
+    // mean the documentation demonstrates behaviour the library no longer has.
+    grunt.file.expand(DIST_DIR + '/*.js').forEach(function (file) {
+      grunt.file.copy(file, pluginDir + '/' + path.basename(file));
+    });
+    grunt.file.expand(DIST_DIR + '/lang/*.js').forEach(function (file) {
+      grunt.file.copy(file, pluginDir + '/lang/' + path.basename(file));
+    });
+    grunt.file.copy(DIST_DIR + '/' + CSS_FILE, pluginDir + '/' + CSS_FILE);
+
+    if (fs.existsSync(jquerySrc)) {
+      grunt.file.copy(jquerySrc, vendor + '/jquery.min.js');
+    } else {
+      grunt.log.writeln('jquery not found in node_modules; left the vendored copy alone.');
+    }
+
+    grunt.log.writeln('>> docs demo assets refreshed');
+  });
+
+  grunt.registerTask("build-production", ["version", "test", "uglify", "dist", "docs-assets"]);
+  grunt.registerTask('build', ['concat', 'copy', 'umd', 'cssmin', 'esm', 'dist', 'docs-assets']);
   grunt.registerTask('test', ['build', 'eslint', 'qunit']);
   grunt.registerTask("default", ["test", "connect", "watch"]);
-  grunt.registerTask("prepublish", ["test", "uglify", "dist"]);
+  grunt.registerTask("prepublish", ["test", "uglify", "dist", "docs-assets"]);
 };

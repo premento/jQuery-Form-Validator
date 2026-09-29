@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modules · jQuery Form Validator</title>
+<meta name="description" content="How the module system works, what each of the sixteen bundled modules adds, and how to write your own.">
+<link rel="stylesheet" href="assets/css/docs.css">
+
+<script>
+  /* Set the theme before first paint so a dark-mode reader never gets a
+     white flash. Deliberately inline and synchronous. */
+  (function () {
+    try {
+      var t = localStorage.getItem('jfv-docs-theme');
+      if (t) { document.documentElement.setAttribute('data-theme', t); }
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body data-base="">
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <button class="icon-btn nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+
+  <a class="brand" href="index.html" aria-label="jQuery Form Validator documentation, home">
+    <span class="brand-mark" aria-hidden="true">✓</span>
+    <span class="brand-text">jQuery Form Validator</span>
+  </a>
+  <span class="version-badge">v4.2.0</span>
+
+  <span class="header-spacer"></span>
+
+  <div class="search" role="search">
+    <label class="skip-link" for="docs-search">Search documentation</label>
+    <input id="docs-search" type="search" placeholder="Search docs…  /" autocomplete="off"
+           role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list">
+    <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>
+  </div>
+
+  <div class="header-actions">
+    <a class="header-link hide-sm" href="https://github.com/premento/jQuery-Form-Validator">GitHub</a>
+    <button class="icon-btn theme-toggle" type="button" aria-label="Switch theme">☾</button>
+  </div>
+</header>
+
+<div class="sidebar-backdrop"></div>
+
+<div class="layout with-toc">
+  <nav class="sidebar" aria-label="Documentation">
+    <h2>Introduction</h2><ul><li><a href="index.html">Overview</a></li><li><a href="getting-started.html">Getting started</a></li><li><a href="examples.html">Examples</a></li></ul><h2>Reference</h2><ul><li><a href="validators.html">Validators</a></li><li><a href="modules.html" aria-current="page">Modules</a></li><li><a href="configuration.html">Configuration</a></li><li><a href="api.html">JavaScript API</a></li></ul><h2>Guides</h2><ul><li><a href="accessibility.html">Accessibility</a></li><li><a href="localization.html">Localization</a></li><li><a href="migration.html">Upgrading</a></li></ul>
+  </nav>
+
+  <main class="content" id="main">
+    <div class="content-inner">
+
+<h1>Modules</h1>
+<p class="lede">
+  The core carries the rules almost every form needs. Everything else — payment details, file
+  checks, national identifiers, colour formats — lives in a module you opt into, so a page never
+  ships validators it does not use.
+</p>
+
+<h2 id="loading-a-module">Loading a module</h2>
+
+<h3 id="by-name">By name</h3>
+
+<p>Name them in <code>modules</code> and they are fetched from beside the core file.</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  modules: 'security, date, file'
+});</code></pre></div>
+
+<p>If they live somewhere else, say so:</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.formUtils.loadModules('security, date', '/assets/js/form-validator/');</code></pre></div>
+
+<h3 id="by-import">By import</h3>
+
+<p>
+  In a bundled or ESM project, import the module instead. It registers itself on load, which is
+  statically analysable, tree-shakeable, and works under a Content-Security-Policy that forbids
+  injected scripts.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">import jQuery from 'jquery-form-validator';
+import 'jquery-form-validator/modules/security';
+import 'jquery-form-validator/modules/date';
+
+jQuery.validate();</code></pre></div>
+
+<div class="callout note"><span class="callout-title">The two styles mix safely</span><p>A module already registered by an <code>import</code> is skipped rather than fetched again, so naming it in <code>modules</code> as well costs nothing. That is what lets a shared configuration keep working in both a plain page and a bundled app.</p></div>
+
+<h3 id="waiting-for-them">Waiting for them</h3>
+
+<p>
+  Module loading is asynchronous. If you need to touch a validator the moment it is available,
+  use the callback rather than guessing at a timeout.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  modules: 'security',
+  onModulesLoaded: function () {
+    // Every named module has registered by this point.
+  }
+});</code></pre></div>
+
+<div class="callout warning"><span class="callout-title">Module and rule names cannot contain a hyphen</span><p>The plugin splits comma, space <em>and</em> hyphen separated lists with the same helper, so a module called <code>constraint-api</code> would be requested as two files named <code>constraint</code> and <code>api</code>, and fail silently. This is why the Constraint Validation bridge is called <code>native</code>. The same applies to any rule name you add yourself.</p></div>
+
+<h2 id="what-each-module-adds">What each module adds</h2>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Module</th><th>Adds</th><th>Reference</th></tr></thead><tbody><tr><td><code>security</code></td><td>Passwords, credit cards, CVV, breach screening, server-side checks, reCAPTCHA, spam check</td><td><a href="validators.html#m-security">Validators →</a></td></tr><tr><td><code>date</code></td><td><code>time</code> and <code>birthdate</code></td><td><a href="validators.html#m-date">Validators →</a></td></tr><tr><td><code>file</code></td><td>File size, MIME type, extension, image dimensions and ratio</td><td><a href="validators.html#m-file">Validators →</a></td></tr><tr><td><code>location</code></td><td>Countries, federal states, longitude/latitude, plus suggestions</td><td><a href="validators.html#m-location">Validators →</a></td></tr><tr><td><code>sepa</code></td><td>IBAN, BIC and SEPA membership</td><td><a href="validators.html#m-sepa">Validators →</a></td></tr><tr><td><code>color</code></td><td>hex, rgb, rgba, hsl, hsla</td><td><a href="validators.html#m-color">Validators →</a></td></tr><tr><td><code>native</code></td><td>The Constraint Validation API bridge</td><td><a href="#module-native">Below ↓</a></td></tr><tr><td><code>html5</code></td><td>Translates HTML5 validation attributes into plugin rules</td><td><a href="#module-html5">Below ↓</a></td></tr><tr><td><code>logic</code></td><td>Conditional validation — <code>depends-on</code>, <code>optional-if-answered</code></td><td><a href="validators.html#conditional-rules">Validators →</a></td></tr><tr><td><code>sanitize</code></td><td>Normalises values before they are validated</td><td><a href="#module-sanitize">Below ↓</a></td></tr><tr><td><code>toggleDisabled</code></td><td>Enables and disables submit buttons as the form becomes valid</td><td><a href="#module-toggledisabled">Below ↓</a></td></tr><tr><td><code>jsconf</code></td><td>Declare rules in JavaScript instead of attributes</td><td><a href="#module-jsconf">Below ↓</a></td></tr><tr><td><code>sweden</code></td><td>Personal identity numbers, phone numbers, counties, municipalities</td><td><a href="validators.html#m-country">Validators →</a></td></tr><tr><td><code>uk</code></td><td>VAT number, National Insurance number, UTR</td><td><a href="validators.html#m-country">Validators →</a></td></tr><tr><td><code>brazil</code></td><td>CPF, CEP, telephone</td><td><a href="validators.html#m-country">Validators →</a></td></tr><tr><td><code>poland</code></td><td>PESEL, NIP, REGON</td><td><a href="validators.html#m-country">Validators →</a></td></tr></tbody></table></div>
+
+<h2 id="module-native">Module: native</h2>
+
+<p>
+  Without this module the browser and the plugin hold two separate, contradictory opinions about
+  the same field: your rule says the value is wrong, while <code>element.validity.valid</code>
+  still reports <code>true</code>. The <code>native</code> module keeps them in agreement, in both
+  directions.
+</p>
+
+<p><strong>Results are mirrored onto the element.</strong> Every validation outcome is written
+back with <code>setCustomValidity()</code>, so these all reflect your <code>data-validation</code>
+rules:</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({ modules: 'native' });
+
+// After a failed check on #email:
+document.querySelector('#email').validity.valid;        // false
+document.querySelector('#email').validationMessage;     // your message
+document.querySelector('form').checkValidity();         // false</code></pre></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;!-- And the CSS pseudo-classes line up too --&gt;
+&lt;style&gt;
+  input:user-invalid { border-color: #b91c1c; }
+  input:user-valid   { border-color: #15803d; }
+&lt;/style&gt;</code></pre></div>
+
+<p><strong>Constraints can be answered by the browser.</strong> Add
+<code>data-validation="native"</code> to a field and <code>ValidityState</code> decides, rather
+than a regular expression:</p>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input type=&quot;email&quot; required data-validation=&quot;native&quot;&gt;
+&lt;input type=&quot;number&quot; min=&quot;10&quot; max=&quot;20&quot; step=&quot;2&quot; data-validation=&quot;native&quot;&gt;</code></pre></div>
+
+<p>
+  To have the <code>html5</code> module emit <code>native</code> for every field it recognises,
+  rather than translating attributes into the plugin's own rules, turn on
+  <code>preferNativeValidation</code>:
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  modules: 'html5, native',
+  preferNativeValidation: true
+});</code></pre></div>
+
+<div class="callout note"><span class="callout-title">:user-invalid needs real interaction</span><p>Those pseudo-classes only match after the visitor has actually edited the field — that is the point of them, and why an untouched form never turns red on load. Scripted value changes will not trigger them.</p></div>
+
+<h2 id="module-html5">Module: html5</h2>
+
+<p>
+  Reads the HTML5 validation attributes already on your markup and turns them into plugin rules,
+  so one set of attributes drives both.
+</p>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Recognised</th><th>Becomes</th></tr></thead><tbody><tr><td><code>required</code></td><td><code>required</code></td></tr><tr><td><code>type="email"</code></td><td><code>email</code></td></tr><tr><td><code>type="url"</code></td><td><code>url</code></td></tr><tr><td><code>type="date"</code></td><td><code>date</code></td></tr><tr><td><code>type="time"</code></td><td><code>time</code> (loads the date module)</td></tr><tr><td><code>type="number"</code> with <code>min</code>/<code>max</code>/<code>step</code></td><td><code>number</code> with a matching <code>allowing</code></td></tr><tr><td><code>pattern</code></td><td><code>custom</code></td></tr><tr><td><code>maxlength</code></td><td><code>length</code></td></tr></tbody></table></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input type=&quot;email&quot; required maxlength=&quot;80&quot;&gt;</code></pre></div>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({ modules: 'html5' });</code></pre></div>
+
+<div class="callout note"><span class="callout-title">Re-scanning is safe</span><p>Rule writing is idempotent, so a form scanned repeatedly — which is what happens with <code>observeDynamicFields</code> — keeps a single copy of each rule instead of accumulating duplicates.</p></div>
+
+<h2 id="module-sanitize">Module: sanitize</h2>
+
+<p>
+  Normalises a value before it is validated, and writes the cleaned value back into the field, so
+  what the user sees is what gets submitted. Declared with <code>data-sanitize</code>.
+</p>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input name=&quot;username&quot; data-sanitize=&quot;trim lower&quot; data-validation=&quot;length&quot;
+       data-validation-length=&quot;min3&quot;&gt;
+
+&lt;input name=&quot;title&quot; data-sanitize=&quot;trim capitalize&quot;&gt;
+
+&lt;input name=&quot;code&quot; data-sanitize=&quot;upper trim&quot;&gt;</code></pre></div>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Sanitizer</th><th>Effect</th></tr></thead><tbody><tr><td><code>trim</code></td><td>Removes whitespace from both ends.</td></tr><tr><td><code>trimLeft</code> / <code>trimRight</code></td><td>Removes whitespace from one end.</td></tr><tr><td><code>upper</code> / <code>lower</code></td><td>Changes case throughout.</td></tr><tr><td><code>capitalize</code></td><td>Upper-cases the first letter of each word.</td></tr><tr><td><code>insertLeft</code> / <code>insertRight</code></td><td>Prepends or appends text, from <code>data-sanitize-insert-left</code> / <code>-right</code>.</td></tr><tr><td><code>escape</code></td><td>Converts <code>&lt; &gt; &amp; ' "</code> to HTML entities.</td></tr><tr><td><code>strip</code></td><td>Removes each word listed in <code>data-sanitize-strip</code>.</td></tr><tr><td><code>numberFormat</code></td><td>Formats via numeral.js using <code>data-sanitize-number-format</code>. numeral is optional — without it, grouping characters are simply stripped.</td></tr><tr><td><code>localeNumberFormat</code></td><td>Formats via <code>Intl.NumberFormat</code>, no third-party library. See <a href="localization.html#numbers">Numbers</a>.</td></tr></tbody></table></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input data-sanitize=&quot;localeNumberFormat&quot;
+       data-sanitize-locale=&quot;de-DE&quot;
+       data-sanitize-number-options='{&quot;minimumFractionDigits&quot;:2}'&gt;</code></pre></div>
+
+<h2 id="module-toggledisabled">Module: toggleDisabled</h2>
+
+<p>
+  Disables the form's submit buttons until every field validates, adding and removing a
+  <code>disabled</code> class alongside the attribute. It reacts to value changes, not only to
+  clicks.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({ modules: 'toggleDisabled' });</code></pre></div>
+
+<div class="callout warning"><span class="callout-title">Consider whether you want this</span><p>A disabled submit button gives no explanation of what is wrong, and cannot be focused to find out. Letting the submit fail and showing an error summary is usually kinder, and is what the plugin does by default.</p></div>
+
+<h2 id="module-jsconf">Module: jsconf</h2>
+
+<p>
+  For markup that is not yours to change — a CMS, a third-party template — declare the rules in
+  JavaScript instead. <code>$.setupValidation()</code> applies them as attributes and then calls
+  <code>$.validate()</code> for you.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.setupValidation({
+  form: '#my-form',
+  modules: 'security',
+  validate: {
+    // by name
+    'user':  {validation: 'length', length: 'min4'},
+    'email': {validation: 'email'},
+    // by id
+    '#phone': {validation: 'required', 'error-msg': 'We need a number'},
+    // by class
+    '.postcode': {validation: 'required'}
+  }
+});</code></pre></div>
+
+<p>
+  Keys become <code>data-validation-*</code> attributes. Prefix a key with an underscore to set a
+  plain attribute instead:
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">'email': {validation: 'email', _placeholder: 'you@example.com'}</code></pre></div>
+
+<h2 id="writing-a-module">Writing a module</h2>
+
+<p>
+  A module is a file that registers what it provides and then adds validators. Register the name
+  so the loader knows not to fetch it twice.
+</p>
+
+<div class="code-block"><div class="code-label"><span>form-validator/mycompany.js</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">(function ($) {
+  'use strict';
+
+  $.formUtils.registerLoadedModule('mycompany');
+
+  $.formUtils.addValidator({
+    name: 'employeeid',
+    validatorFunction: function (value) {
+      return /^EMP-\d{6}$/.test(value);
+    },
+    errorMessage: 'Employee IDs look like EMP-000123',
+    errorMessageKey: 'badEmployeeId'
+  });
+
+})(jQuery);</code></pre></div>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({ modules: 'mycompany' });</code></pre></div>
+
+<p>
+  Keep the file beside the core script, or pass a path to <code>loadModules()</code>. See
+  <a href="api.html#custom-validators">custom validators</a> for the full shape of a validator
+  object, including asynchronous ones.
+</p>
+
+<nav class="page-nav" aria-label="Page navigation"><a class="prev" href="validators.html"><span class="dir">← Previous</span><span class="ttl">Validators</span></a><a class="next" href="configuration.html"><span class="dir">Next →</span><span class="ttl">Configuration</span></a></nav>
+    </div>
+  </main>
+
+  <aside class="toc" aria-label="On this page">
+    <h2>On this page</h2>
+    <ul class="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <p>jQuery Form Validator 4.2.0 — MIT licensed.
+     <a href="https://github.com/premento/jQuery-Form-Validator">Source on GitHub</a></p>
+</footer>
+
+<script src="assets/js/search-index.js"></script>
+<script src="assets/js/docs.js"></script>
+
+</body>
+</html>

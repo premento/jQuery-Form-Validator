@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaScript API · jQuery Form Validator</title>
+<meta name="description" content="Programmatic reference: $.validate, the jQuery plugin methods, $.formUtils, custom validators, sanitizers and the events the plugin fires.">
+<link rel="stylesheet" href="assets/css/docs.css">
+
+<script>
+  /* Set the theme before first paint so a dark-mode reader never gets a
+     white flash. Deliberately inline and synchronous. */
+  (function () {
+    try {
+      var t = localStorage.getItem('jfv-docs-theme');
+      if (t) { document.documentElement.setAttribute('data-theme', t); }
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body data-base="">
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <button class="icon-btn nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+
+  <a class="brand" href="index.html" aria-label="jQuery Form Validator documentation, home">
+    <span class="brand-mark" aria-hidden="true">✓</span>
+    <span class="brand-text">jQuery Form Validator</span>
+  </a>
+  <span class="version-badge">v4.2.0</span>
+
+  <span class="header-spacer"></span>
+
+  <div class="search" role="search">
+    <label class="skip-link" for="docs-search">Search documentation</label>
+    <input id="docs-search" type="search" placeholder="Search docs…  /" autocomplete="off"
+           role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list">
+    <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>
+  </div>
+
+  <div class="header-actions">
+    <a class="header-link hide-sm" href="https://github.com/premento/jQuery-Form-Validator">GitHub</a>
+    <button class="icon-btn theme-toggle" type="button" aria-label="Switch theme">☾</button>
+  </div>
+</header>
+
+<div class="sidebar-backdrop"></div>
+
+<div class="layout with-toc">
+  <nav class="sidebar" aria-label="Documentation">
+    <h2>Introduction</h2><ul><li><a href="index.html">Overview</a></li><li><a href="getting-started.html">Getting started</a></li><li><a href="examples.html">Examples</a></li></ul><h2>Reference</h2><ul><li><a href="validators.html">Validators</a></li><li><a href="modules.html">Modules</a></li><li><a href="configuration.html">Configuration</a></li><li><a href="api.html" aria-current="page">JavaScript API</a></li></ul><h2>Guides</h2><ul><li><a href="accessibility.html">Accessibility</a></li><li><a href="localization.html">Localization</a></li><li><a href="migration.html">Upgrading</a></li></ul>
+  </nav>
+
+  <main class="content" id="main">
+    <div class="content-inner">
+
+<h1>JavaScript API</h1>
+<p class="lede">
+  Everything the plugin exposes: the entry point, the jQuery methods it adds, the
+  <code>$.formUtils</code> toolbox, and the events you can hook into.
+</p>
+
+<h2 id="validate">$.validate(config)</h2>
+
+<p>
+  Sets up validation on the matched forms. Safe to call again — the second call removes the
+  handlers the first one attached before re-binding.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  form: '#checkout',
+  modules: 'security'
+});</code></pre></div>
+
+<p>See <a href="configuration.html">Configuration</a> for every option.</p>
+
+<h2 id="setupvalidation">$.setupValidation(config)</h2>
+
+<p>
+  From the <code>jsconf</code> module. Declares rules in JavaScript, applies them as attributes,
+  then calls <code>$.validate()</code>.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.setupValidation({
+  form: '#my-form',
+  validate: {
+    'user':  {validation: 'length', length: 'min4'},
+    'email': {validation: 'email'}
+  }
+});</code></pre></div>
+
+<h2 id="jquery-methods">jQuery methods</h2>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Method</th><th>Description</th></tr></thead><tbody><tr><td><code>$form.isValid(language, config, displayErrors)</code></td><td>Validates every field and returns a boolean. Pass <code>false</code> as the third argument to check without showing anything.</td></tr><tr><td><code>$input.validate(callback, config, language)</code></td><td>Validates a single field and calls back with the result.</td></tr><tr><td><code>$form.validateOnBlur(language, config)</code></td><td>Binds blur validation to the form's fields.</td></tr><tr><td><code>$form.validateOnEvent(language, config)</code></td><td>Binds validation to the events named by <code>data-validation-event</code>.</td></tr><tr><td><code>$input.validateOnInput(language, config)</code></td><td>Re-validates the field as its value changes.</td></tr><tr><td><code>$input.removeInputValidation()</code></td><td>Stops that live re-validation.</td></tr><tr><td><code>$input.validateInputOnBlur(language, config, attachInputEvent, eventContext)</code></td><td>Validates one field and renders the outcome.</td></tr><tr><td><code>$input.restrictLength($counter)</code></td><td>Caps typing at the number in <code>$counter</code> and counts down as the user types.</td></tr><tr><td><code>$form.showHelpOnFocus(attrName)</code></td><td>Wires up <code>data-validation-help</code> text.</td></tr><tr><td><code>$form.addSuggestions(settings)</code></td><td>Wires up <code>data-suggestions</code> dropdowns.</td></tr><tr><td><code>$input.valAttr(name, value)</code></td><td>Gets, sets or removes a <code>data-validation-*</code> attribute.</td></tr></tbody></table></div>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">// Check without rendering anything
+if ($('#signup').isValid(null, null, false)) {
+  submitOverXhr();
+}
+
+// Validate one field
+$('#email').validate(function (isValid, $el) {
+  console.log($el.attr('name'), isValid);
+});
+
+// Character countdown
+$('#bio').restrictLength($('#chars-left'));</code></pre></div>
+
+<div class="callout warning"><span class="callout-title">Deprecated methods</span><p><code>$.fn.validateForm</code> (use <code>isValid</code>), <code>$.fn.validateOnKeyUp</code> (use <code>validateOnInput</code>) and <code>$.fn.removeKeyUpValidation</code> (use <code>removeInputValidation</code>) still work and log a warning.</p></div>
+
+<h2 id="formutils">$.formUtils</h2>
+
+<h3 id="registering-things">Registering things</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Member</th><th>Description</th></tr></thead><tbody><tr><td><code>addValidator(validator)</code></td><td>Registers a validation rule.</td></tr><tr><td><code>addAsyncValidator(validator)</code></td><td>Registers a rule that resolves asynchronously.</td></tr><tr><td><code>addSanitizer(sanitizer)</code></td><td>Registers a <code>data-sanitize</code> transform.</td></tr><tr><td><code>validators</code></td><td>The registry, keyed <code>validate_<em>name</em></code>.</td></tr><tr><td><code>sanitizers</code></td><td>The sanitizer registry.</td></tr></tbody></table></div>
+
+<h3 id="modules">Modules</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Member</th><th>Description</th></tr></thead><tbody><tr><td><code>loadModules(names, path, callback)</code></td><td>Loads modules, optionally from a given path.</td></tr><tr><td><code>registerLoadedModule(name)</code></td><td>Marks a module as present, so it is not fetched again.</td></tr><tr><td><code>hasLoadedModule(name)</code></td><td>Whether a module has registered.</td></tr><tr><td><code>normalizeModuleName(name)</code></td><td>Lower-cases and strips a trailing <code>.js</code>.</td></tr></tbody></table></div>
+
+<h3 id="validating">Validating</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Member</th><th>Description</th></tr></thead><tbody><tr><td><code>validateInput($el, language, config, $form, eventContext)</code></td><td>Validates one element and returns <code>{isValid, errorMsg, shouldChangeDisplay}</code>.</td></tr><tr><td><code>getValue(query, $parent)</code></td><td>Reads a value, handling radio and checkbox groups.</td></tr><tr><td><code>defaultConfig()</code></td><td>A fresh copy of the default configuration.</td></tr><tr><td><code>haltValidation</code></td><td>Set to <code>true</code> inside a validator to suspend validation and block submission.</td></tr><tr><td><code>numericRangeCheck(value, range)</code></td><td>Shared <code>min4</code> / <code>max9</code> / <code>1-4</code> parsing.</td></tr><tr><td><code>parseDate(value, format, addLeadingZeros)</code></td><td>Returns <code>[year, month, day]</code>, or <code>false</code>.</td></tr><tr><td><code>warn(message)</code></td><td>Logs through the plugin's own console channel.</td></tr></tbody></table></div>
+
+<h3 id="messages-and-locale">Messages and locale</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Member</th><th>Description</th></tr></thead><tbody><tr><td><code>LANG</code></td><td>The active message catalogue.</td></tr><tr><td><code>formatMessage(template, params, count)</code></td><td>Substitutes <code>{0}</code> placeholders and selects a plural form.</td></tr><tr><td><code>selectPluralForm(forms, count)</code></td><td>Picks a CLDR plural category via <code>Intl.PluralRules</code>.</td></tr><tr><td><code>locale()</code></td><td>The locale used for <code>Intl</code> formatting.</td></tr><tr><td><code>localeDecimalSeparator()</code></td><td>The separator this locale writes numbers with.</td></tr><tr><td><code>unformatNumber(value)</code></td><td>Strips grouping characters from a formatted number.</td></tr></tbody></table></div>
+
+<h3 id="accessibility-helpers">Accessibility helpers</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Member</th><th>Description</th></tr></thead><tbody><tr><td><code>a11y.markInvalid($input)</code></td><td>Sets <code>aria-invalid="true"</code>.</td></tr><tr><td><code>a11y.describeError($input, $message)</code></td><td>Links the message to the field with <code>aria-describedby</code> and makes it a polite live region.</td></tr><tr><td><code>a11y.clearError($input)</code></td><td>Removes the invalid flag and detaches only the token the plugin added.</td></tr><tr><td><code>a11y.ensureInputId($input)</code></td><td>Gives the field an id so a summary entry can link to it.</td></tr><tr><td><code>a11y.focus($elem)</code></td><td>Moves focus, making a container focusable first if needed.</td></tr><tr><td><code>a11y.prefersReducedMotion()</code></td><td>Whether the visitor has asked for reduced motion.</td></tr></tbody></table></div>
+
+<h2 id="custom-validators">Custom validators</h2>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.formUtils.addValidator({
+  name: 'even',
+
+  validatorFunction: function (value, $el, config, language, $form) {
+    return parseInt(value, 10) % 2 === 0;
+  },
+
+  errorMessage: 'Please give an even number',
+  errorMessageKey: 'badEvenNumber'
+});</code></pre></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input data-validation=&quot;even&quot;&gt;</code></pre></div>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Property</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td><code>name</code></td><td>yes</td><td>The rule name, as written in <code>data-validation</code>. No hyphens.</td></tr><tr><td><code>validatorFunction</code></td><td>yes</td><td>Returns <code>true</code>, <code>false</code>, or <code>null</code> to mean "cannot answer yet".</td></tr><tr><td><code>errorMessage</code></td><td>yes</td><td>Fallback text, used when the language file has no entry.</td></tr><tr><td><code>errorMessageKey</code></td><td>yes</td><td>Key looked up in <code>$.formUtils.LANG</code>. May be a function of the config.</td></tr><tr><td><code>validateOnInput</code></td><td>no</td><td>Set <code>false</code> to skip this rule while the user is still typing. Defaults to <code>true</code>.</td></tr></tbody></table></div>
+
+<p>The validator function receives:</p>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Argument</th><th>What it is</th></tr></thead><tbody><tr><td><code>value</code></td><td>The field value, after any sanitizers have run.</td></tr><tr><td><code>$el</code></td><td>The field, as a jQuery object.</td></tr><tr><td><code>config</code></td><td>The active configuration.</td></tr><tr><td><code>language</code></td><td>The active message catalogue.</td></tr><tr><td><code>$form</code></td><td>The form the field belongs to.</td></tr><tr><td><code>eventContext</code></td><td><code>'blur'</code>, <code>'input'</code>, <code>'submit'</code>, <code>'click'</code>.</td></tr></tbody></table></div>
+
+<h3 id="reading-your-own-attributes">Reading your own attributes</h3>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.formUtils.addValidator({
+  name: 'multipleof',
+  validatorFunction: function (value, $el, config, language) {
+    var factor = parseInt($el.valAttr('factor'), 10);
+    if (isNaN(factor)) {
+      $.formUtils.warn('data-validation-factor is missing');
+      return true;
+    }
+    this.errorMessage = 'Must be a multiple of ' + factor;
+    return parseInt(value, 10) % factor === 0;
+  },
+  errorMessage: '',
+  errorMessageKey: ''
+});</code></pre></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input data-validation=&quot;multipleof&quot; data-validation-factor=&quot;5&quot;&gt;</code></pre></div>
+
+<h3 id="asynchronous-validators">Asynchronous validators</h3>
+
+<p>
+  Use <code>addAsyncValidator</code> when the answer needs a round trip. The first argument is a
+  callback you invoke with the result; form submission waits for it.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.formUtils.addAsyncValidator({
+  name: 'unique_username',
+
+  validatorFunction: function (done, value, $el, config, language, $form) {
+    $.getJSON('/api/username?u=' + encodeURIComponent(value))
+      .done(function (res) { done(res.available); })
+      .fail(function () { done(true); });   // fail open
+  },
+
+  errorMessage: 'That username is taken',
+  errorMessageKey: 'badUsername'
+});</code></pre></div>
+
+<div class="callout note"><span class="callout-title">Async validators are debounced</span><p>Checks wait <code>data-validation-debounce</code> milliseconds (500 by default) before calling out, so a visitor who edits and leaves a field several times produces one request carrying the value they finished on. Submitting is never debounced — the request goes out at once. While a check is in flight the field is marked <code>aria-busy</code> rather than disabled, so it keeps focus and stays in the tab order.</p></div>
+
+<h2 id="custom-sanitizers">Custom sanitizers</h2>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.formUtils.addSanitizer({
+  name: 'stripSpaces',
+  sanitizerFunction: function (value, $input, config) {
+    return value.replace(/\s+/g, '');
+  }
+});</code></pre></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input data-sanitize=&quot;stripSpaces&quot; data-validation=&quot;creditcard&quot;&gt;</code></pre></div>
+
+<h2 id="events">Events</h2>
+
+<p>
+  All of these are jQuery events. Field-level ones bubble, so you can delegate from the form.
+</p>
+
+<h3 id="on-a-field">On a field</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Event</th><th>Arguments</th><th>When</th></tr></thead><tbody><tr><td><code>beforeValidation</code></td><td><code>value, language, config</code></td><td>Before a field is validated. Call <code>evt.stopImmediatePropagation()</code> to take over the skip decision.</td></tr><tr><td><code>validation</code></td><td><code>isValid</code></td><td>Immediately after a field is judged.</td></tr><tr><td><code>afterValidation</code></td><td><code>result, eventContext</code></td><td>After the result object is complete.</td></tr><tr><td><code>validationErrorDisplay</code></td><td><code>$input, $messageElement</code></td><td>Just before an error message is written. Fired on <code>window</code>.</td></tr></tbody></table></div>
+
+<h3 id="on-the-form-or-window">On the form or window</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Event</th><th>Arguments</th><th>When</th></tr></thead><tbody><tr><td><code>formValidationPluginInit</code></td><td><code>config</code></td><td><code>$.validate()</code> has been called. Fired on <code>window</code>.</td></tr><tr><td><code>formValidationSetup</code></td><td><code>$form, config</code></td><td>A form is being set up.</td></tr><tr><td><code>validatorsLoaded</code></td><td><code>$form, config</code></td><td>Every module named in <code>modules</code> has registered. Fired on <code>window</code>.</td></tr><tr><td><code>html5ValidationAttrsFound</code></td><td>—</td><td>The html5 module translated some attributes.</td></tr></tbody></table></div>
+
+<h3 id="from-specific-validators">From specific validators</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Event</th><th>Arguments</th><th>From</th></tr></thead><tbody><tr><td><code>ageCalculated</code></td><td><code>age</code></td><td><code>birthdate</code></td></tr><tr><td><code>imageValidation</code></td><td><code>isValid</code></td><td><code>dimension</code></td></tr><tr><td><code>genderDerived</code></td><td><code>gender</code></td><td><code>swesec</code></td></tr><tr><td><code>complexityRequirementValidation</code></td><td><code>isValid, requirement</code></td><td><code>complexity</code></td></tr></tbody></table></div>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">// Live password requirement checklist
+$('#password').on('complexityRequirementValidation', function (e, valid, name) {
+  $('#req-' + name).toggleClass('met', valid);
+});
+
+// Show the age as a birthdate is typed
+$('#dob').on('ageCalculated', function (e, age) {
+  $('#age-readout').text(age + ' years old');
+});
+
+// Delegate from the form
+$('#signup').on('afterValidation', '[data-validation]', function (e, result) {
+  if (!result.isValid) {
+    analytics.track('field_error', {field: this.name});
+  }
+});</code></pre></div>
+
+<h2 id="suspending-validation">Suspending validation</h2>
+
+<p>
+  Setting <code>$.formUtils.haltValidation = true</code> inside a validator stops the run and
+  blocks submission until something clears it. This is how the asynchronous validators hold a
+  form while a request is outstanding.
+</p>
+
+<h2 id="typescript">TypeScript</h2>
+
+<p>
+  Declarations ship with the package and are wired into the <code>exports</code> map, so both
+  <code>import</code> and <code>require</code> resolve the right ones. Nothing to install.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">import 'jquery-form-validator';
+
+$.validate({
+  modules: 'security',
+  errorMessagePosition: 'top',
+  onSuccess: function ($form) { return true; }
+});</code></pre></div>
+
+<nav class="page-nav" aria-label="Page navigation"><a class="prev" href="configuration.html"><span class="dir">← Previous</span><span class="ttl">Configuration</span></a><a class="next" href="accessibility.html"><span class="dir">Next →</span><span class="ttl">Accessibility</span></a></nav>
+    </div>
+  </main>
+
+  <aside class="toc" aria-label="On this page">
+    <h2>On this page</h2>
+    <ul class="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <p>jQuery Form Validator 4.2.0 — MIT licensed.
+     <a href="https://github.com/premento/jQuery-Form-Validator">Source on GitHub</a></p>
+</footer>
+
+<script src="assets/js/search-index.js"></script>
+<script src="assets/js/docs.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overview · jQuery Form Validator</title>
+<meta name="description" content="Configure form validation rather than code it. A jQuery plugin with 50+ validators, first-class accessibility, Constraint Validation API integration and 20 bundled languages.">
+<link rel="stylesheet" href="assets/css/docs.css">
+
+<script>
+  /* Set the theme before first paint so a dark-mode reader never gets a
+     white flash. Deliberately inline and synchronous. */
+  (function () {
+    try {
+      var t = localStorage.getItem('jfv-docs-theme');
+      if (t) { document.documentElement.setAttribute('data-theme', t); }
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body data-base="">
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <button class="icon-btn nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+
+  <a class="brand" href="index.html" aria-label="jQuery Form Validator documentation, home">
+    <span class="brand-mark" aria-hidden="true">✓</span>
+    <span class="brand-text">jQuery Form Validator</span>
+  </a>
+  <span class="version-badge">v4.2.0</span>
+
+  <span class="header-spacer"></span>
+
+  <div class="search" role="search">
+    <label class="skip-link" for="docs-search">Search documentation</label>
+    <input id="docs-search" type="search" placeholder="Search docs…  /" autocomplete="off"
+           role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list">
+    <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>
+  </div>
+
+  <div class="header-actions">
+    <a class="header-link hide-sm" href="https://github.com/premento/jQuery-Form-Validator">GitHub</a>
+    <button class="icon-btn theme-toggle" type="button" aria-label="Switch theme">☾</button>
+  </div>
+</header>
+
+<div class="sidebar-backdrop"></div>
+
+<div class="layout">
+  <nav class="sidebar" aria-label="Documentation">
+    <h2>Introduction</h2><ul><li><a href="index.html" aria-current="page">Overview</a></li><li><a href="getting-started.html">Getting started</a></li><li><a href="examples.html">Examples</a></li></ul><h2>Reference</h2><ul><li><a href="validators.html">Validators</a></li><li><a href="modules.html">Modules</a></li><li><a href="configuration.html">Configuration</a></li><li><a href="api.html">JavaScript API</a></li></ul><h2>Guides</h2><ul><li><a href="accessibility.html">Accessibility</a></li><li><a href="localization.html">Localization</a></li><li><a href="migration.html">Upgrading</a></li></ul>
+  </nav>
+
+  <main class="content" id="main">
+    <div class="content-inner">
+
+<div class="hero">
+  <h1>Configure your validation,<br>don't code it.</h1>
+  <p class="lede">
+    jQuery Form Validator keeps validation rules in your markup and out of your JavaScript.
+    Declare what a field needs with a <code>data-validation</code> attribute and the plugin
+    handles the rest — the checking, the messages, the styling, and the accessibility
+    plumbing that makes those messages reach everyone.
+  </p>
+
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="getting-started.html">Get started →</a>
+    <a class="btn btn-secondary" href="examples.html">See live examples</a>
+    <a class="btn btn-secondary" href="https://github.com/premento/jQuery-Form-Validator">GitHub</a>
+  </div>
+</div>
+
+<div class="code-block"><div class="code-label"><span>The whole setup</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;form action=&quot;/signup&quot; method=&quot;post&quot;&gt;
+  &lt;label for=&quot;name&quot;&gt;Name&lt;/label&gt;
+  &lt;input id=&quot;name&quot; name=&quot;name&quot; data-validation=&quot;length&quot; data-validation-length=&quot;min2&quot;&gt;
+
+  &lt;label for=&quot;email&quot;&gt;Email&lt;/label&gt;
+  &lt;input id=&quot;email&quot; name=&quot;email&quot; type=&quot;email&quot; data-validation=&quot;email&quot;&gt;
+
+  &lt;label for=&quot;site&quot;&gt;Website&lt;/label&gt;
+  &lt;input id=&quot;site&quot; name=&quot;site&quot; data-validation=&quot;url&quot; data-validation-optional=&quot;true&quot;&gt;
+
+  &lt;button type=&quot;submit&quot;&gt;Create account&lt;/button&gt;
+&lt;/form&gt;
+
+&lt;script src=&quot;jquery.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;form-validator/jquery.form-validator.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+  $.validate();
+&lt;/script&gt;</code></pre></div>
+
+<div class="callout note"><span class="callout-title">That is the entire integration</span><p>No rule objects, no schema, no per-field wiring. <code>$.validate()</code> finds every field carrying a <code>data-validation</code> attribute and takes over from there.</p></div>
+
+<h2 id="why-this-plugin">Why this plugin</h2>
+
+<div class="card-grid">
+  <div class="card">
+    <span class="card-icon" aria-hidden="true">♿</span>
+    <h3>Accessible by default</h3>
+    <p>Errors are announced, not just coloured. <code>aria-invalid</code>, <code>aria-describedby</code>,
+       polite live regions, and focus moved to the problem on submit.</p>
+  </div>
+  <div class="card">
+    <span class="card-icon" aria-hidden="true">🧩</span>
+    <h3>50+ validators</h3>
+    <p>Email, URL, dates, numbers and lengths built in. Credit cards, IBAN, passwords, files,
+       colours and country-specific formats a module away.</p>
+  </div>
+  <div class="card">
+    <span class="card-icon" aria-hidden="true">⚖️</span>
+    <h3>Pay for what you load</h3>
+    <p>The core is small and every extra family of validators is a separate module you opt into,
+       by name or by <code>import</code>.</p>
+  </div>
+  <div class="card">
+    <span class="card-icon" aria-hidden="true">🌍</span>
+    <h3>20 languages bundled</h3>
+    <p>Whole-sentence message templates with real plural forms via <code>Intl.PluralRules</code>,
+       not English word order with the number glued in.</p>
+  </div>
+  <div class="card">
+    <span class="card-icon" aria-hidden="true">🔗</span>
+    <h3>Agrees with the browser</h3>
+    <p>The <code>native</code> module mirrors every result onto the element, so
+       <code>checkValidity()</code> and <code>:user-invalid</code> match your rules.</p>
+  </div>
+  <div class="card">
+    <span class="card-icon" aria-hidden="true">📦</span>
+    <h3>Modern packaging</h3>
+    <p>UMD, ESM and TypeScript declarations. Works from a <code>&lt;script&gt;</code> tag, a
+       bundler, or a plain <code>import</code>.</p>
+  </div>
+</div>
+
+<h2 id="built-for-real-forms">Built for real forms</h2>
+
+<p>
+  Validation fires when a field loses focus, and once a field is showing an error it
+  re-checks as the value changes — so a mistake is confirmed fixed the moment it is fixed,
+  rather than on the next blur. That is the <em>reward early, punish late</em> pattern, and
+  it is the default.
+</p>
+
+<p>
+  It listens to the <code>input</code> event, which means a value arriving by paste, autofill,
+  drag-and-drop, speech input or IME composition is caught. Key events miss all of those.
+</p>
+
+<div class="code-block"><div class="code-label"><span>A fuller setup</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  modules: 'security, date, file',
+
+  // Errors collected into one summary above the form instead of beside each field.
+  errorMessagePosition: 'top',
+
+  // Bootstrap 4/5 class names instead of the Bootstrap 3 era defaults.
+  bootstrap: 5,
+
+  onSuccess: function ($form) {
+    // Return false to submit over XHR instead.
+    return true;
+  }
+});</code></pre></div>
+
+<h2 id="what-is-in-420">What is in 4.2.0</h2>
+
+<p>
+  Version 3.0 was a substantial modernisation, and 4.x continues it. The headline changes:
+</p>
+
+<ul>
+  <li><strong>Accessibility.</strong> Every error is now associated with its field for assistive
+      technology, the summary is a navigable <code>role="alert"</code>, and focus moves to the
+      problem. <a href="accessibility.html">Read more →</a></li>
+  <li><strong>Constraint Validation API.</strong> The <code>native</code> module keeps the browser's
+      view of a field and the plugin's view in agreement.
+      <a href="modules.html#module-native">Read more →</a></li>
+  <li><strong>Passwords rescored.</strong> <code>strength</code> follows NIST SP 800-63B rev 4 —
+      length-driven, not composition-driven — with optional breach screening.
+      <a href="validators.html#strength">Read more →</a></li>
+  <li><strong>Bootstrap 4 and 5 presets.</strong> <code>bootstrap: 5</code> emits
+      <code>is-invalid</code> and <code>.invalid-feedback</code> instead of the 3.x class names.
+      <a href="configuration.html#bootstrap-presets">Read more →</a></li>
+  <li><strong>ESM and TypeScript.</strong> An <code>exports</code> map, real
+      <code>.d.ts</code> declarations, and no runtime script injection.
+      <a href="getting-started.html#installing">Read more →</a></li>
+</ul>
+
+<p>Upgrading from 2.x? The <a href="migration.html">upgrade guide</a> lists every breaking change.</p>
+
+<h2 id="where-to-next">Where to next</h2>
+
+<div class="card-grid">
+  <a class="card" href="getting-started.html">
+    <h3>Getting started →</h3>
+    <p>Install it, validate your first form, and learn how the pieces fit together.</p>
+  </a>
+  <a class="card" href="validators.html">
+    <h3>Validator reference →</h3>
+    <p>Every rule, what it accepts, and the attributes that configure it.</p>
+  </a>
+  <a class="card" href="examples.html">
+    <h3>Live examples →</h3>
+    <p>Working forms you can type into, running the real plugin on this page.</p>
+  </a>
+  <a class="card" href="api.html">
+    <h3>JavaScript API →</h3>
+    <p>Custom validators, events, and everything on <code>$.formUtils</code>.</p>
+  </a>
+</div>
+
+<nav class="page-nav" aria-label="Page navigation"><span></span><a class="next" href="getting-started.html"><span class="dir">Next →</span><span class="ttl">Getting started</span></a></nav>
+    </div>
+  </main>
+
+</div>
+
+<footer class="site-footer">
+  <p>jQuery Form Validator 4.2.0 — MIT licensed.
+     <a href="https://github.com/premento/jQuery-Form-Validator">Source on GitHub</a></p>
+</footer>
+
+<script src="assets/js/search-index.js"></script>
+<script src="assets/js/docs.js"></script>
+
+</body>
+</html>

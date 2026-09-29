@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Examples · jQuery Form Validator</title>
+<meta name="description" content="Working forms running the real plugin: inline errors, error summaries, password strength, conditional rules, sanitization, dynamic fields and custom validators.">
+<link rel="stylesheet" href="assets/css/docs.css">
+<link rel="stylesheet" href="assets/vendor/form-validator/theme-default.css">
+<script>
+  /* Set the theme before first paint so a dark-mode reader never gets a
+     white flash. Deliberately inline and synchronous. */
+  (function () {
+    try {
+      var t = localStorage.getItem('jfv-docs-theme');
+      if (t) { document.documentElement.setAttribute('data-theme', t); }
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body data-base="">
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <button class="icon-btn nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+
+  <a class="brand" href="index.html" aria-label="jQuery Form Validator documentation, home">
+    <span class="brand-mark" aria-hidden="true">✓</span>
+    <span class="brand-text">jQuery Form Validator</span>
+  </a>
+  <span class="version-badge">v4.2.0</span>
+
+  <span class="header-spacer"></span>
+
+  <div class="search" role="search">
+    <label class="skip-link" for="docs-search">Search documentation</label>
+    <input id="docs-search" type="search" placeholder="Search docs…  /" autocomplete="off"
+           role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list">
+    <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>
+  </div>
+
+  <div class="header-actions">
+    <a class="header-link hide-sm" href="https://github.com/premento/jQuery-Form-Validator">GitHub</a>
+    <button class="icon-btn theme-toggle" type="button" aria-label="Switch theme">☾</button>
+  </div>
+</header>
+
+<div class="sidebar-backdrop"></div>
+
+<div class="layout with-toc">
+  <nav class="sidebar" aria-label="Documentation">
+    <h2>Introduction</h2><ul><li><a href="index.html">Overview</a></li><li><a href="getting-started.html">Getting started</a></li><li><a href="examples.html" aria-current="page">Examples</a></li></ul><h2>Reference</h2><ul><li><a href="validators.html">Validators</a></li><li><a href="modules.html">Modules</a></li><li><a href="configuration.html">Configuration</a></li><li><a href="api.html">JavaScript API</a></li></ul><h2>Guides</h2><ul><li><a href="accessibility.html">Accessibility</a></li><li><a href="localization.html">Localization</a></li><li><a href="migration.html">Upgrading</a></li></ul>
+  </nav>
+
+  <main class="content" id="main">
+    <div class="content-inner">
+
+<h1>Examples</h1>
+<p class="lede">
+  Every form on this page is running the actual plugin. Type into them, submit them, and watch
+  what happens — nothing here is a screenshot.
+</p>
+
+<div class="callout note"><span class="callout-title">Nothing is submitted</span><p>Each demo returns <code>false</code> from <code>onSuccess</code>, so a passing form reports success instead of navigating away.</p></div>
+
+<h2 id="basic-validation">Basic validation</h2>
+
+<p>Three rules, inline messages, and no configuration beyond naming the form.</p>
+
+<div class="demo"><div class="demo-header"><span>Sign-up form</span><span>Live</span></div><div class="demo-live">
+<form id="demo-basic" novalidate>
+  <p>
+    <label for="d1-name">Name</label>
+    <input id="d1-name" name="name" type="text" data-validation="required">
+  </p>
+  <p>
+    <label for="d1-email">Email</label>
+    <input id="d1-email" name="email" type="email" data-validation="email">
+  </p>
+  <p>
+    <label for="d1-site">Website <span style="font-weight:400;color:var(--text-faint)">(optional)</span></label>
+    <input id="d1-site" name="site" type="text" data-validation="url" data-validation-optional="true">
+  </p>
+  <button type="submit">Create account</button>
+</form>
+<p class="demo-result" id="demo-basic-result"></p></div><p class="demo-note">Submit it empty, then fix one field at a time — each error clears the moment it is corrected.</p></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;form id=&quot;signup&quot;&gt;
+  &lt;label for=&quot;name&quot;&gt;Name&lt;/label&gt;
+  &lt;input id=&quot;name&quot; name=&quot;name&quot; data-validation=&quot;required&quot;&gt;
+
+  &lt;label for=&quot;email&quot;&gt;Email&lt;/label&gt;
+  &lt;input id=&quot;email&quot; name=&quot;email&quot; type=&quot;email&quot; data-validation=&quot;email&quot;&gt;
+
+  &lt;label for=&quot;site&quot;&gt;Website&lt;/label&gt;
+  &lt;input id=&quot;site&quot; name=&quot;site&quot; data-validation=&quot;url&quot; data-validation-optional=&quot;true&quot;&gt;
+
+  &lt;button type=&quot;submit&quot;&gt;Create account&lt;/button&gt;
+&lt;/form&gt;</code></pre></div>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({ form: '#signup' });</code></pre></div>
+
+<h2 id="error-summary">Error summary</h2>
+
+<p>
+  The same rules with <code>errorMessagePosition: 'top'</code>. Errors collect into one
+  <code>role="alert"</code> block and focus moves into it, with every entry linking to its field.
+</p>
+
+<div class="demo"><div class="demo-header"><span>Summary above the form</span><span>Live</span></div><div class="demo-live">
+<form id="demo-summary" novalidate>
+  <p>
+    <label for="d2-name">Full name</label>
+    <input id="d2-name" name="name" type="text" data-validation="length" data-validation-length="min2">
+  </p>
+  <p>
+    <label for="d2-email">Email</label>
+    <input id="d2-email" name="email" type="email" data-validation="email">
+  </p>
+  <p>
+    <label for="d2-age">Age</label>
+    <input id="d2-age" name="age" type="text" data-validation="number" data-validation-allowing="range[18;120]">
+  </p>
+  <button type="submit">Continue</button>
+</form>
+<p class="demo-result" id="demo-summary-result"></p></div><p class="demo-note">Submit empty, then use Tab and Enter on the summary links — each one takes you to the field it names.</p></div>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  form: '#signup',
+  errorMessagePosition: 'top'
+});</code></pre></div>
+
+<h2 id="passwords">Passwords</h2>
+
+<p>
+  <code>strength</code> scores by length rather than by character composition, and
+  <code>confirmation</code> checks the two fields match.
+</p>
+
+<div class="demo"><div class="demo-header"><span>Password strength and confirmation</span><span>Live</span></div><div class="demo-live">
+<form id="demo-password" novalidate>
+  <p>
+    <label for="d3-pw">Password</label>
+    <input id="d3-pw" name="pw" type="password"
+           data-validation="strength" data-validation-strength="2"
+           data-validation-help="A long passphrase beats a short complicated one">
+  </p>
+  <p>
+    <label for="d3-pw2">Confirm password</label>
+    <input id="d3-pw2" name="pw_confirm" type="password"
+           data-validation="confirmation" data-validation-confirm="pw">
+  </p>
+  <button type="submit">Set password</button>
+</form>
+<p class="demo-result" id="demo-password-result"></p></div><p class="demo-note">Try <code>P@ss1!</code> — rejected. Then <code>correcthorsebatterystaple</code> — accepted. Length is what counts.</p></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input name=&quot;pw&quot; type=&quot;password&quot;
+       data-validation=&quot;strength&quot; data-validation-strength=&quot;2&quot;&gt;
+
+&lt;input name=&quot;pw_confirm&quot; type=&quot;password&quot;
+       data-validation=&quot;confirmation&quot; data-validation-confirm=&quot;pw&quot;&gt;</code></pre></div>
+
+<p>To also screen against known breaches, add the <code>breached</code> rule:</p>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input name=&quot;pw&quot; type=&quot;password&quot; data-validation=&quot;strength breached&quot;&gt;</code></pre></div>
+
+<div class="callout warning"><span class="callout-title">Not enabled in this demo</span><p><code>breached</code> makes an outbound request to the Have I Been Pwned range API on every check, so it is shown here as code rather than wired up on a documentation page. Only the first five characters of the password's SHA-1 are ever sent — see <a href="validators.html#breached">the reference</a>.</p></div>
+
+<h2 id="conditional-rules">Conditional rules</h2>
+
+<p>
+  With the <code>logic</code> module, whether a rule runs can depend on another field.
+</p>
+
+<div class="demo"><div class="demo-header"><span>A field required only when another is answered</span><span>Live</span></div><div class="demo-live">
+<form id="demo-logic" novalidate>
+  <p>
+    <label for="d4-country">Country</label>
+    <select id="d4-country" name="country" data-validation="required">
+      <option value="">Choose…</option>
+      <option value="SE">Sweden</option>
+      <option value="GB">United Kingdom</option>
+      <option value="other">Somewhere else</option>
+    </select>
+  </p>
+  <p>
+    <label for="d4-vat">VAT number <span style="font-weight:400;color:var(--text-faint)">(required for Sweden)</span></label>
+    <input id="d4-vat" name="vat" type="text"
+           data-validation="required"
+           data-validation-depends-on="country"
+           data-validation-depends-on-value="SE">
+  </p>
+  <button type="submit">Save</button>
+</form>
+<p class="demo-result" id="demo-logic-result"></p></div><p class="demo-note">Pick “Somewhere else” and submit — VAT is skipped. Pick “Sweden” and it becomes required.</p></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input name=&quot;vat&quot; data-validation=&quot;required&quot;
+       data-validation-depends-on=&quot;country&quot;
+       data-validation-depends-on-value=&quot;SE&quot;&gt;</code></pre></div>
+
+<h2 id="sanitizing-input">Sanitizing input</h2>
+
+<p>
+  The <code>sanitize</code> module cleans the value before it is validated, and writes the cleaned
+  value back so what you see is what gets submitted.
+</p>
+
+<div class="demo"><div class="demo-header"><span>Trim, lower-case and capitalize</span><span>Live</span></div><div class="demo-live">
+<form id="demo-sanitize" novalidate>
+  <p>
+    <label for="d5-user">Username <span style="font-weight:400;color:var(--text-faint)">(trimmed and lower-cased)</span></label>
+    <input id="d5-user" name="user" type="text"
+           data-sanitize="trim lower"
+           data-validation="length" data-validation-length="min3">
+  </p>
+  <p>
+    <label for="d5-city">City <span style="font-weight:400;color:var(--text-faint)">(trimmed and capitalized)</span></label>
+    <input id="d5-city" name="city" type="text"
+           data-sanitize="trim capitalize" data-validation="required">
+  </p>
+  <button type="submit">Save</button>
+</form>
+<p class="demo-result" id="demo-sanitize-result"></p></div><p class="demo-note">Type <code>  ADA  </code> into either field and move focus away.</p></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input data-sanitize=&quot;trim lower&quot; data-validation=&quot;length&quot;
+       data-validation-length=&quot;min3&quot;&gt;</code></pre></div>
+
+<h2 id="numbers-and-dates">Numbers and dates</h2>
+
+<div class="demo"><div class="demo-header"><span>Ranges, decimals and date formats</span><span>Live</span></div><div class="demo-live">
+<form id="demo-number" novalidate>
+  <p>
+    <label for="d6-qty">Quantity <span style="font-weight:400;color:var(--text-faint)">(1–100)</span></label>
+    <input id="d6-qty" name="qty" type="text"
+           data-validation="number" data-validation-allowing="range[1;100]">
+  </p>
+  <p>
+    <label for="d6-price">Price <span style="font-weight:400;color:var(--text-faint)">(decimals allowed)</span></label>
+    <input id="d6-price" name="price" type="text"
+           data-validation="number" data-validation-allowing="float">
+  </p>
+  <p>
+    <label for="d6-date">Date <span style="font-weight:400;color:var(--text-faint)">(dd/mm/yyyy)</span></label>
+    <input id="d6-date" name="date" type="text"
+           data-validation="date" data-validation-format="dd/mm/yyyy">
+  </p>
+  <button type="submit">Check</button>
+</form>
+<p class="demo-result" id="demo-number-result"></p></div><p class="demo-note">Try <code>29/02/2024</code> — a real leap day, accepted. Then <code>29/02/2023</code> — rejected.</p></div>
+
+<h2 id="checkbox-groups">Checkbox groups</h2>
+
+<div class="demo"><div class="demo-header"><span>At least one, at most three</span><span>Live</span></div><div class="demo-live">
+<form id="demo-checkbox" novalidate>
+  <fieldset style="border:1px solid var(--border);border-radius:6px;padding:14px">
+    <legend style="font-weight:600;font-size:14px;padding:0 6px">Topics (choose 1–3)</legend>
+    <label style="font-weight:400"><input type="checkbox" name="topics[]" value="a"
+        data-validation="checkbox_group" data-validation-qty="1-3"> Accessibility</label>
+    <label style="font-weight:400"><input type="checkbox" name="topics[]" value="b"> Performance</label>
+    <label style="font-weight:400"><input type="checkbox" name="topics[]" value="c"> Security</label>
+    <label style="font-weight:400"><input type="checkbox" name="topics[]" value="d"> Testing</label>
+  </fieldset>
+  <p style="margin-top:14px"><button type="submit">Subscribe</button></p>
+</form>
+<p class="demo-result" id="demo-checkbox-result"></p></div><p class="demo-note">Only the first checkbox carries the attributes; the rule covers the whole group by name.</p></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input type=&quot;checkbox&quot; name=&quot;topics[]&quot; data-validation=&quot;checkbox_group&quot;
+       data-validation-qty=&quot;1-3&quot;&gt;
+&lt;input type=&quot;checkbox&quot; name=&quot;topics[]&quot;&gt;
+&lt;input type=&quot;checkbox&quot; name=&quot;topics[]&quot;&gt;</code></pre></div>
+
+<h2 id="fields-added-later">Fields added later</h2>
+
+<p>
+  With <code>observeDynamicFields</code> the plugin watches the form and wires up fields that
+  appear after setup, instead of needing <code>$.validate()</code> called again.
+</p>
+
+<div class="demo"><div class="demo-header"><span>Repeatable rows</span><span>Live</span></div><div class="demo-live">
+<form id="demo-dynamic" novalidate>
+  <div id="demo-dynamic-rows">
+    <p>
+      <label for="d8-e0">Email 1</label>
+      <input id="d8-e0" name="email0" type="text" data-validation="email">
+    </p>
+  </div>
+  <p>
+    <button type="button" id="demo-add-row"
+            style="padding:8px 14px;font:inherit;font-weight:600;background:var(--bg-sunken);color:var(--text);border:1px solid var(--border-strong);border-radius:6px;cursor:pointer">
+      + Add another email
+    </button>
+  </p>
+  <button type="submit">Invite</button>
+</form>
+<p class="demo-result" id="demo-dynamic-result"></p></div><p class="demo-note">Add a row, put something invalid in it, and submit — the new field is validated too.</p></div>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  form: '#invites',
+  observeDynamicFields: true
+});</code></pre></div>
+
+<h2 id="a-custom-validator">A custom validator</h2>
+
+<p>
+  Anything you can express as a function can be a rule. This one checks for an even number.
+</p>
+
+<div class="demo"><div class="demo-header"><span>data-validation=&quot;even&quot;</span><span>Live</span></div><div class="demo-live">
+<form id="demo-custom" novalidate>
+  <p>
+    <label for="d9-num">An even number</label>
+    <input id="d9-num" name="num" type="text" data-validation="required even">
+  </p>
+  <button type="submit">Check</button>
+</form>
+<p class="demo-result" id="demo-custom-result"></p></div><p class="demo-note">Registered on this page with <code>$.formUtils.addValidator()</code>.</p></div>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.formUtils.addValidator({
+  name: 'even',
+  validatorFunction: function (value) {
+    return parseInt(value, 10) % 2 === 0;
+  },
+  errorMessage: 'Please give an even number',
+  errorMessageKey: 'badEvenNumber'
+});</code></pre></div>
+
+<h2 id="help-text-and-suggestions">Help text and suggestions</h2>
+
+<div class="demo"><div class="demo-header"><span>Focus a field to see its help text</span><span>Live</span></div><div class="demo-live">
+<form id="demo-help" novalidate>
+  <p>
+    <label for="d10-colour">Favourite colour</label>
+    <input id="d10-colour" name="colour" type="text"
+           data-suggestions="White, Green, Blue, Black, Brown, Burgundy"
+           data-validation="required"
+           data-validation-help="Start typing and suggestions will appear">
+  </p>
+  <button type="submit">Save</button>
+</form>
+<p class="demo-result" id="demo-help-result"></p></div><p class="demo-note">Type <code>b</code> to see the suggestion list. No jQuery UI involved.</p></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input name=&quot;colour&quot;
+       data-suggestions=&quot;White, Green, Blue, Black, Brown&quot;
+       data-validation-help=&quot;Start typing and suggestions will appear&quot;
+       data-validation=&quot;required&quot;&gt;</code></pre></div>
+
+<h2 id="putting-it-together">Putting it together</h2>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  form: '#checkout',
+  modules: 'security, date, logic, sanitize',
+  errorMessagePosition: 'top',
+  bootstrap: 5,
+
+  onSuccess: function ($form) {
+    $.post('/checkout', $form.serialize());
+    return false;
+  },
+
+  onError: function ($form) {
+    analytics.track('checkout_validation_failed');
+  }
+});</code></pre></div>
+
+<nav class="page-nav" aria-label="Page navigation"><a class="prev" href="getting-started.html"><span class="dir">← Previous</span><span class="ttl">Getting started</span></a><a class="next" href="validators.html"><span class="dir">Next →</span><span class="ttl">Validators</span></a></nav>
+    </div>
+  </main>
+
+  <aside class="toc" aria-label="On this page">
+    <h2>On this page</h2>
+    <ul class="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <p>jQuery Form Validator 4.2.0 — MIT licensed.
+     <a href="https://github.com/premento/jQuery-Form-Validator">Source on GitHub</a></p>
+</footer>
+
+<script src="assets/js/search-index.js"></script>
+<script src="assets/js/docs.js"></script>
+
+<script src="assets/vendor/jquery.min.js"></script>
+<script src="assets/vendor/form-validator/jquery.form-validator.js"></script>
+<script src="assets/js/demos.js"></script>
+
+</body>
+</html>

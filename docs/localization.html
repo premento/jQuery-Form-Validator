@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Localization · jQuery Form Validator</title>
+<meta name="description" content="The twenty bundled languages, overriding individual messages, sentence templates with plural forms, and locale-aware number handling.">
+<link rel="stylesheet" href="assets/css/docs.css">
+
+<script>
+  /* Set the theme before first paint so a dark-mode reader never gets a
+     white flash. Deliberately inline and synchronous. */
+  (function () {
+    try {
+      var t = localStorage.getItem('jfv-docs-theme');
+      if (t) { document.documentElement.setAttribute('data-theme', t); }
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body data-base="">
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <button class="icon-btn nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+
+  <a class="brand" href="index.html" aria-label="jQuery Form Validator documentation, home">
+    <span class="brand-mark" aria-hidden="true">✓</span>
+    <span class="brand-text">jQuery Form Validator</span>
+  </a>
+  <span class="version-badge">v4.2.0</span>
+
+  <span class="header-spacer"></span>
+
+  <div class="search" role="search">
+    <label class="skip-link" for="docs-search">Search documentation</label>
+    <input id="docs-search" type="search" placeholder="Search docs…  /" autocomplete="off"
+           role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list">
+    <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>
+  </div>
+
+  <div class="header-actions">
+    <a class="header-link hide-sm" href="https://github.com/premento/jQuery-Form-Validator">GitHub</a>
+    <button class="icon-btn theme-toggle" type="button" aria-label="Switch theme">☾</button>
+  </div>
+</header>
+
+<div class="sidebar-backdrop"></div>
+
+<div class="layout with-toc">
+  <nav class="sidebar" aria-label="Documentation">
+    <h2>Introduction</h2><ul><li><a href="index.html">Overview</a></li><li><a href="getting-started.html">Getting started</a></li><li><a href="examples.html">Examples</a></li></ul><h2>Reference</h2><ul><li><a href="validators.html">Validators</a></li><li><a href="modules.html">Modules</a></li><li><a href="configuration.html">Configuration</a></li><li><a href="api.html">JavaScript API</a></li></ul><h2>Guides</h2><ul><li><a href="accessibility.html">Accessibility</a></li><li><a href="localization.html" aria-current="page">Localization</a></li><li><a href="migration.html">Upgrading</a></li></ul>
+  </nav>
+
+  <main class="content" id="main">
+    <div class="content-inner">
+
+<h1>Localization</h1>
+<p class="lede">
+  English is built in and twenty translations ship with the package. Messages are whole-sentence
+  templates with real plural forms, so a translator can put the number where their language needs
+  it instead of inheriting English word order.
+</p>
+
+<h2 id="bundled-languages">Bundled languages</h2>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Code</th><th>Language</th><th>Code</th><th>Language</th><th>Code</th><th>Language</th><th>Code</th><th>Language</th></tr></thead><tbody><tr><td><code>ar</code></td><td>Arabic</td><td><code>ca</code></td><td>Catalan</td><td><code>cs</code></td><td>Czech</td><td><code>da</code></td><td>Danish</td></tr><tr><td><code>de</code></td><td>German</td><td><code>es</code></td><td>Spanish</td><td><code>fa</code></td><td>Persian</td><td><code>fr</code></td><td>French</td></tr><tr><td><code>it</code></td><td>Italian</td><td><code>ka</code></td><td>Georgian</td><td><code>ko</code></td><td>Korean</td><td><code>nl</code></td><td>Dutch</td></tr><tr><td><code>no</code></td><td>Norwegian</td><td><code>pl</code></td><td>Polish</td><td><code>pt</code></td><td>Portuguese</td><td><code>ro</code></td><td>Romanian</td></tr><tr><td><code>ru</code></td><td>Russian</td><td><code>sv</code></td><td>Swedish</td><td><code>tr</code></td><td>Turkish</td><td><code>vi</code></td><td>Vietnamese</td></tr></tbody></table></div>
+
+<h2 id="loading-a-language">Loading a language</h2>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({ lang: 'sv' });     // fetched at runtime, like a module</code></pre></div>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">import 'jquery-form-validator/lang/sv';   // registered up front, no request
+
+$.validate();</code></pre></div>
+
+<h2 id="overriding-individual-messages">Overriding individual messages</h2>
+
+<p>
+  The <code>language</code> option is merged over whichever catalogue is active, so you can adjust
+  a handful of strings without maintaining a whole file.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  language: {
+    requiredField: 'We need this one',
+    badEmail: 'That does not look like an email address',
+    errorTitle: 'Please check the following'
+  }
+});</code></pre></div>
+
+<h2 id="message-templates">Message templates</h2>
+
+<p>
+  Messages that carry a number used to be assembled by concatenating two fragments around it,
+  which pins every language to English word order and cannot express plural forms. Since 3.0 they
+  are whole sentences with a <code>{0}</code> placeholder:
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">// Before 3.0 — two fragments glued around a number
+lengthTooShortStart: 'The input value is shorter than ',
+lengthBadEnd: ' characters'
+
+// From 3.0 — one sentence, with plural forms
+lengthTooShort: {
+  one:   'The input value is shorter than {0} character',
+  other: 'The input value is shorter than {0} characters'
+}</code></pre></div>
+
+<p>
+  Plural category selection goes through <code>Intl.PluralRules</code>, so languages with more
+  than two forms are handled properly rather than being forced into <code>item(s)</code>.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  lang: 'pl',
+  language: {
+    groupCheckedTooFew: {
+      one:   'Wybierz co najmniej {0} opcję',
+      few:   'Wybierz co najmniej {0} opcje',
+      many:  'Wybierz co najmniej {0} opcji',
+      other: 'Wybierz co najmniej {0} opcji'
+    }
+  }
+});</code></pre></div>
+
+<div class="callout note"><span class="callout-title">Nothing broke</span><p>The old fragment keys are still present in every bundled language and are still honoured. If a template is absent the fragments are concatenated exactly as before, so a <code>language</code> override that only sets the old keys keeps working unchanged.</p></div>
+
+<h3 id="which-messages-take-a-count">Which messages take a count</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Template key</th><th>Fragments it replaces</th></tr></thead><tbody><tr><td><code>lengthBadRange</code></td><td><code>lengthBadStart</code> + <code>lengthBadEnd</code></td></tr><tr><td><code>lengthTooShort</code></td><td><code>lengthTooShortStart</code> + <code>lengthBadEnd</code></td></tr><tr><td><code>lengthTooLong</code></td><td><code>lengthTooLongStart</code> + <code>lengthBadEnd</code></td></tr><tr><td><code>groupCheckedRange</code></td><td><code>groupCheckedRangeStart</code> + <code>groupCheckedEnd</code></td></tr><tr><td><code>groupCheckedTooFew</code></td><td><code>groupCheckedTooFewStart</code> + <code>groupCheckedEnd</code></td></tr><tr><td><code>groupCheckedTooMany</code></td><td><code>groupCheckedTooManyStart</code> + <code>groupCheckedEnd</code></td></tr><tr><td><code>badNumberOfSelectedOptions</code></td><td><code>badNumberOfSelectedOptionsStart</code> + <code>...End</code></td></tr></tbody></table></div>
+
+<div class="callout note"><span class="callout-title">Bundled translations are flat strings</span><p>The templates in the twenty bundled languages were composed mechanically from the fragments each file already contained, so today's output is identical to before. They are flat strings rather than plural objects, because a trailing fragment such as <code>" tecken"</code> does not reveal what the singular should be. Adding proper plural forms for your language is a welcome contribution.</p></div>
+
+<h2 id="message-keys">Message keys</h2>
+
+<p>Every key you can override. Anything absent falls back to English.</p>
+
+<h3 id="general">General</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Key</th><th>Default</th></tr></thead><tbody><tr><td><code>errorTitle</code></td><td>Form submission failed!</td></tr><tr><td><code>requiredField</code></td><td>This is a required field</td></tr><tr><td><code>requiredFields</code></td><td>You have not answered all required fields</td></tr><tr><td><code>badCustomVal</code></td><td>The input value is incorrect</td></tr><tr><td><code>notConfirmed</code></td><td>Input values could not be confirmed</td></tr></tbody></table></div>
+
+<h3 id="formats">Formats</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Key</th><th>Default</th></tr></thead><tbody><tr><td><code>badEmail</code></td><td>You have not given a correct e-mail address</td></tr><tr><td><code>badUrl</code></td><td>The input value is not a correct URL</td></tr><tr><td><code>badDomain</code></td><td>Incorrect domain value</td></tr><tr><td><code>badInt</code></td><td>The input value was not a correct number</td></tr><tr><td><code>badDate</code></td><td>You have not given a correct date</td></tr><tr><td><code>badTime</code></td><td>You have not given a correct time</td></tr><tr><td><code>badTelephone</code></td><td>You have not given a correct phone number</td></tr><tr><td><code>badAlphaNumeric</code></td><td>The input value can only contain alphanumeric characters</td></tr><tr><td><code>badAlphaNumericExtra</code></td><td> and </td></tr><tr><td><code>andSpaces</code></td><td> and spaces </td></tr></tbody></table></div>
+
+<h3 id="security">Security</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Key</th><th>Default</th></tr></thead><tbody><tr><td><code>badStrength</code></td><td>The password isn't strong enough</td></tr><tr><td><code>badBreachedPassword</code></td><td>This password has appeared in a known data breach. Please choose a different one.</td></tr><tr><td><code>badCreditCard</code></td><td>The credit card number is not correct</td></tr><tr><td><code>badCVV</code></td><td>The CVV number was not correct</td></tr><tr><td><code>badSecurityAnswer</code></td><td>You have not given a correct answer to the security question</td></tr><tr><td><code>badSecurityNumber</code></td><td>Your social security number was incorrect</td></tr><tr><td><code>badreCaptcha</code></td><td>Please confirm that you are not a bot</td></tr><tr><td><code>passwordComplexityStart</code></td><td>Password must contain at least </td></tr><tr><td><code>passwordComplexityUppercaseInfo</code></td><td> uppercase letter(s)</td></tr><tr><td><code>passwordComplexityLowercaseInfo</code></td><td> lowercase letter(s)</td></tr><tr><td><code>passwordComplexitySpecialCharsInfo</code></td><td> special character(s)</td></tr><tr><td><code>passwordComplexityNumericCharsInfo</code></td><td> numeric character(s)</td></tr></tbody></table></div>
+
+<h3 id="files">Files</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Key</th><th>Default</th></tr></thead><tbody><tr><td><code>wrongFileSize</code></td><td>The file you are trying to upload is too large (max %s)</td></tr><tr><td><code>wrongFileType</code></td><td>Only files of type %s is allowed</td></tr><tr><td><code>wrongFileDim</code></td><td>Incorrect image dimensions,</td></tr><tr><td><code>imageTooTall</code></td><td>the image can not be taller than</td></tr><tr><td><code>imageTooWide</code></td><td>the image can not be wider than</td></tr><tr><td><code>imageTooSmall</code></td><td>the image was too small</td></tr><tr><td><code>imageRatioNotAccepted</code></td><td>Image ratio is not be accepted</td></tr></tbody></table></div>
+
+<h3 id="banking-and-national-formats">Banking and national formats</h3>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Key</th><th>Default</th></tr></thead><tbody><tr><td><code>badIban</code></td><td>Invalid IBAN number</td></tr><tr><td><code>badBic</code></td><td>Invalid BIC/SWIFT code</td></tr><tr><td><code>badSepa</code></td><td>Invalid SEPA account number</td></tr><tr><td><code>badUKVatAnswer</code></td><td>Incorrect UK VAT Number</td></tr><tr><td><code>badUKNin</code></td><td>Incorrect UK NIN</td></tr><tr><td><code>badUKUtr</code></td><td>Incorrect UK UTR Number</td></tr><tr><td><code>badBrazilCPFAnswer</code></td><td>The CPF entered is invalid</td></tr><tr><td><code>badBrazilCEPAnswer</code></td><td>The CEP entered is invalid</td></tr><tr><td><code>badBrazilTelephoneAnswer</code></td><td>The phone number entered is invalid</td></tr><tr><td><code>badPlPesel</code></td><td>The PESEL entered is invalid</td></tr><tr><td><code>badPlNip</code></td><td>The NIP entered is invalid</td></tr><tr><td><code>badPlRegon</code></td><td>The REGON entered is invalid</td></tr></tbody></table></div>
+
+<h2 id="numbers">Numbers</h2>
+
+<p>
+  <code>decimalSeparator</code> takes an <code>'auto'</code> setting that reads the separator from
+  the browser locale through <code>Intl.NumberFormat</code>.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({ decimalSeparator: 'auto' });</code></pre></div>
+
+<div class="callout warning"><span class="callout-title">It is opt-in, and the default is still a full stop</span><p>Deliberately. A form that posts to a server expecting <code>1.5</code> should not silently start accepting <code>1,5</code> because a visitor's browser is set to German. What matters is your site's locale, which the library has no way of knowing.</p></div>
+
+<p>
+  For display, the <code>localeNumberFormat</code> sanitizer formats through
+  <code>Intl.NumberFormat</code> with no third-party dependency:
+</p>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input data-sanitize=&quot;localeNumberFormat&quot;
+       data-sanitize-locale=&quot;de-DE&quot;
+       data-sanitize-number-options='{&quot;minimumFractionDigits&quot;:2}'&gt;</code></pre></div>
+
+<h2 id="adding-a-language">Adding a language</h2>
+
+<p>
+  A language file replaces <code>$.formUtils.LANG</code> wholesale. Copy an existing one from
+  <code>src/lang/</code> as a starting point.
+</p>
+
+<div class="code-block"><div class="code-label"><span>form-validator/lang/xx.js</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">(function ($) {
+  $.formUtils.registerLoadedModule('lang/xx');
+
+  $.formUtils.LANG = {
+    errorTitle: '…',
+    requiredField: '…',
+    badEmail: '…',
+
+    // Whole-sentence template; {0} is the number.
+    lengthTooShort: {
+      one:   '…{0}…',
+      other: '…{0}…'
+    }
+    // …
+  };
+})(jQuery);</code></pre></div>
+
+<h2 id="formatting-helpers">Formatting helpers</h2>
+
+<p>The same helpers the plugin uses are available for your own validators.</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.formUtils.formatMessage('between {0} and {1}', [2, 8]);
+// &quot;between 2 and 8&quot;
+
+$.formUtils.formatMessage(
+  {one: '{0} item', other: '{0} items'}, [3], 3
+);
+// &quot;3 items&quot;
+
+$.formUtils.locale();                    // &quot;en-GB&quot;
+$.formUtils.localeDecimalSeparator();    // &quot;.&quot;</code></pre></div>
+
+<nav class="page-nav" aria-label="Page navigation"><a class="prev" href="accessibility.html"><span class="dir">← Previous</span><span class="ttl">Accessibility</span></a><a class="next" href="migration.html"><span class="dir">Next →</span><span class="ttl">Upgrading</span></a></nav>
+    </div>
+  </main>
+
+  <aside class="toc" aria-label="On this page">
+    <h2>On this page</h2>
+    <ul class="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <p>jQuery Form Validator 4.2.0 — MIT licensed.
+     <a href="https://github.com/premento/jQuery-Form-Validator">Source on GitHub</a></p>
+</footer>
+
+<script src="assets/js/search-index.js"></script>
+<script src="assets/js/docs.js"></script>
+
+</body>
+</html>

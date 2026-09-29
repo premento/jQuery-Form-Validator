@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuration · jQuery Form Validator</title>
+<meta name="description" content="Every option accepted by $.validate() — setup, timing, error presentation, parsing, callbacks and the Bootstrap presets.">
+<link rel="stylesheet" href="assets/css/docs.css">
+
+<script>
+  /* Set the theme before first paint so a dark-mode reader never gets a
+     white flash. Deliberately inline and synchronous. */
+  (function () {
+    try {
+      var t = localStorage.getItem('jfv-docs-theme');
+      if (t) { document.documentElement.setAttribute('data-theme', t); }
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body data-base="">
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <button class="icon-btn nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+
+  <a class="brand" href="index.html" aria-label="jQuery Form Validator documentation, home">
+    <span class="brand-mark" aria-hidden="true">✓</span>
+    <span class="brand-text">jQuery Form Validator</span>
+  </a>
+  <span class="version-badge">v4.2.0</span>
+
+  <span class="header-spacer"></span>
+
+  <div class="search" role="search">
+    <label class="skip-link" for="docs-search">Search documentation</label>
+    <input id="docs-search" type="search" placeholder="Search docs…  /" autocomplete="off"
+           role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list">
+    <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>
+  </div>
+
+  <div class="header-actions">
+    <a class="header-link hide-sm" href="https://github.com/premento/jQuery-Form-Validator">GitHub</a>
+    <button class="icon-btn theme-toggle" type="button" aria-label="Switch theme">☾</button>
+  </div>
+</header>
+
+<div class="sidebar-backdrop"></div>
+
+<div class="layout with-toc">
+  <nav class="sidebar" aria-label="Documentation">
+    <h2>Introduction</h2><ul><li><a href="index.html">Overview</a></li><li><a href="getting-started.html">Getting started</a></li><li><a href="examples.html">Examples</a></li></ul><h2>Reference</h2><ul><li><a href="validators.html">Validators</a></li><li><a href="modules.html">Modules</a></li><li><a href="configuration.html" aria-current="page">Configuration</a></li><li><a href="api.html">JavaScript API</a></li></ul><h2>Guides</h2><ul><li><a href="accessibility.html">Accessibility</a></li><li><a href="localization.html">Localization</a></li><li><a href="migration.html">Upgrading</a></li></ul>
+  </nav>
+
+  <main class="content" id="main">
+    <div class="content-inner">
+
+<h1>Configuration</h1>
+<p class="lede">
+  Everything below is passed to <code>$.validate()</code>. This is the complete list as it
+  stands in the source.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  form: '#checkout',
+  modules: 'security, date',
+  errorMessagePosition: 'top',
+  bootstrap: 5,
+  onSuccess: function ($form) { return true; }
+});</code></pre></div>
+
+<h2 id="setup">Setup</h2>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Option</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><code>form</code></td><td><code>'form'</code></td><td>Selector for the form or forms to set up.</td></tr><tr><td><code>modules</code></td><td><code>''</code></td><td>Comma separated modules to load. Modules already registered by an <code>import</code> are not fetched again.</td></tr><tr><td><code>lang</code></td><td>—</td><td>Language code to load from <code>lang/</code>, e.g. <code>'sv'</code>.</td></tr><tr><td><code>language</code></td><td><code>false</code></td><td>Object overriding individual messages. See <a href="localization.html">Localization</a>.</td></tr><tr><td><code>ignore</code></td><td><code>[]</code></td><td>Names of inputs to skip even when they carry validation rules.</td></tr><tr><td><code>novalidate</code></td><td><code>true</code></td><td>Add <code>novalidate</code> to the form so the browser does not stack its own bubbles on top of the plugin's messages. A <code>novalidate</code> you wrote yourself is never removed.</td></tr><tr><td><code>observeDynamicFields</code></td><td><code>false</code></td><td>Watch the form with a <code>MutationObserver</code> and wire up fields added after <code>$.validate()</code> ran.</td></tr><tr><td><code>preferNativeValidation</code></td><td><code>false</code></td><td>With the <code>native</code> module loaded, let the browser answer <code>type</code>, <code>min</code>, <code>max</code>, <code>step</code> and <code>pattern</code>.</td></tr><tr><td><code>validateHiddenInputs</code></td><td><code>false</code></td><td>Whether hidden inputs are validated.</td></tr><tr><td><code>bootstrap</code></td><td><code>false</code></td><td>Which Bootstrap release the page uses, so matching class names are emitted. See <a href="#bootstrap-presets">below</a>.</td></tr></tbody></table></div>
+
+<h2 id="when-validation-runs">When validation runs</h2>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Option</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><code>validateOnBlur</code></td><td><code>true</code></td><td>Validate a field when it loses focus.</td></tr><tr><td><code>validateOnEvent</code></td><td><code>false</code></td><td>Honour <code>data-validation-event</code> on an element.</td></tr><tr><td><code>validateCheckboxRadioOnClick</code></td><td><code>true</code></td><td>Validate checkboxes and radios as soon as they are clicked.</td></tr><tr><td><code>showHelpOnFocus</code></td><td><code>true</code></td><td>Fade in <code>data-validation-help</code> text on focus.</td></tr><tr><td><code>addSuggestions</code></td><td><code>true</code></td><td>Enable the input suggestion feature.</td></tr></tbody></table></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;!-- With validateOnEvent: true --&gt;
+&lt;input data-validation=&quot;required&quot; data-validation-event=&quot;change&quot;&gt;</code></pre></div>
+
+<h2 id="error-presentation">Error presentation</h2>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Option</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><code>errorMessagePosition</code></td><td><code>'inline'</code></td><td><code>'inline'</code> writes each message beside its field; <code>'top'</code> renders one summary above the form.</td></tr><tr><td><code>errorMessageTemplate</code></td><td>see <a href="#customising-the-summary">below</a></td><td>Markup used to build the summary.</td></tr><tr><td><code>errorMessageClass</code></td><td><code>'form-error'</code></td><td>Class on the element holding a message. This is the plugin's own hook for finding its messages — read the note under <a href="#bootstrap-presets">Bootstrap presets</a> before changing it.</td></tr><tr><td><code>inlineErrorMessageClass</code></td><td><code>'help-block'</code></td><td>Extra class on an inline message, for your CSS framework. <code>'invalid-feedback'</code> under <code>bootstrap: 4</code>/<code>5</code>.</td></tr><tr><td><code>helpTextClass</code></td><td><code>'help-block'</code></td><td>Extra class on <code>data-validation-help</code> text. <code>'form-text'</code> under <code>bootstrap: 4</code>/<code>5</code>.</td></tr><tr><td><code>errorElementClass</code></td><td><code>'error'</code></td><td>Class applied to an invalid field.</td></tr><tr><td><code>successElementClass</code></td><td><code>'valid'</code></td><td>Class applied to a field that validated.</td></tr><tr><td><code>addValidClassOnAll</code></td><td><code>false</code></td><td>Apply <code>successElementClass</code> even to fields that were never validated.</td></tr><tr><td><code>inputParentClassOnError</code></td><td><code>'has-error'</code></td><td>Class on the invalid field's parent.</td></tr><tr><td><code>inputParentClassOnSuccess</code></td><td><code>'has-success'</code></td><td>Class on the valid field's parent.</td></tr><tr><td><code>borderColorOnError</code></td><td><code>'#b94a48'</code></td><td>Inline border colour for an invalid field. An empty string leaves the border alone.</td></tr><tr><td><code>scrollToTopOnError</code></td><td><code>true</code></td><td>Scroll to the summary on a failed submit.</td></tr><tr><td><code>focusOnError</code></td><td><code>true</code></td><td>Move focus to the summary, or the first invalid field, on a failed submit. See <a href="accessibility.html">Accessibility</a>.</td></tr><tr><td><code>inlineErrorMessageCallback</code></td><td><code>false</code></td><td><code>function($input, errorMsg, conf)</code> returning the element the inline message should be written into. Return something falsy to suppress the plugin's own display entirely.</td></tr><tr><td><code>submitErrorMessageCallback</code></td><td><code>false</code></td><td><code>function($form, errorMessages, conf)</code> returning the container for the summary. Return something falsy to handle display yourself.</td></tr></tbody></table></div>
+
+<h2 id="parsing">Parsing</h2>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Option</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><code>validationRuleAttribute</code></td><td><code>'data-validation'</code></td><td>Attribute holding the rules.</td></tr><tr><td><code>validationErrorMsgAttribute</code></td><td><code>'data-validation-error-msg'</code></td><td>Attribute holding a per-field custom message.</td></tr><tr><td><code>dateFormat</code></td><td><code>'yyyy-mm-dd'</code></td><td>Format used by <code>date</code> and <code>birthdate</code>.</td></tr><tr><td><code>decimalSeparator</code></td><td><code>'.'</code></td><td>Set to <code>'auto'</code> to take it from the browser locale. See <a href="localization.html#numbers">Numbers</a>.</td></tr></tbody></table></div>
+
+<h2 id="callbacks">Callbacks</h2>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Option</th><th>Signature</th><th>Description</th></tr></thead><tbody><tr><td><code>onModulesLoaded</code></td><td><code>function()</code></td><td>Called once every module named in <code>modules</code> has registered.</td></tr><tr><td><code>onSuccess</code></td><td><code>function($form)</code></td><td>On a passing submit. Return <code>false</code> to stop the submission — useful when you want to post over XHR.</td></tr><tr><td><code>onError</code></td><td><code>function($form)</code></td><td>On a failing submit.</td></tr><tr><td><code>onElementValidate</code></td><td><code>function(valid, $input, $form, errorMsg)</code></td><td>After each individual field is validated.</td></tr></tbody></table></div>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  onSuccess: function ($form) {
+    $.post('/signup', $form.serialize());
+    return false;   // we are handling the submit ourselves
+  },
+  onError: function ($form) {
+    analytics.track('signup_validation_failed');
+  },
+  onElementValidate: function (valid, $input, $form, errorMsg) {
+    if (!valid) {
+      console.log($input.attr('name') + ': ' + errorMsg);
+    }
+  }
+});</code></pre></div>
+
+<h2 id="bootstrap-presets">Bootstrap presets</h2>
+
+<p>
+  The class names this plugin has emitted since 2.x are Bootstrap 3 vintage:
+  <code>has-error</code> on the field's parent, <code>help-block</code> on the message.
+  Bootstrap 4 removed every one of them and validates instead through <code>is-invalid</code> on
+  the control itself, with a sibling <code>.invalid-feedback</code> carrying the text. Bootstrap 5
+  kept that model.
+</p>
+
+<p>Tell the plugin which release you are on and it emits the right names:</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({ bootstrap: 5 });   // 3, 4, 5, or a full version like '5.3.2'</code></pre></div>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Option</th><th>Default</th><th>Under <code>bootstrap: 4</code> / <code>5</code></th></tr></thead><tbody><tr><td><code>errorElementClass</code></td><td><code>'error'</code></td><td><code>'is-invalid'</code></td></tr><tr><td><code>successElementClass</code></td><td><code>'valid'</code></td><td><code>'is-valid'</code></td></tr><tr><td><code>inlineErrorMessageClass</code></td><td><code>'help-block'</code></td><td><code>'invalid-feedback'</code></td></tr><tr><td><code>helpTextClass</code></td><td><code>'help-block'</code></td><td><code>'form-text'</code></td></tr><tr><td><code>inputParentClassOnError</code></td><td><code>'has-error'</code></td><td><code>''</code> — no longer exists</td></tr><tr><td><code>inputParentClassOnSuccess</code></td><td><code>'has-success'</code></td><td><code>''</code> — no longer exists</td></tr><tr><td><code>borderColorOnError</code></td><td><code>'#b94a48'</code></td><td><code>''</code> — so Bootstrap's own palette wins</td></tr></tbody></table></div>
+
+<div class="callout note"><span class="callout-title">Your own options still win</span><p>The preset is layered between the defaults and the configuration you pass, so anything you state explicitly beats it. <code>{bootstrap: 5, errorElementClass: 'my-error'}</code> uses your class.</p></div>
+
+<div class="callout warning"><span class="callout-title">&lt;code&gt;errorMessageClass&lt;/code&gt; keeps its default on purpose</span><p>It is the hook the plugin uses to find, update and remove its own messages, and Bootstrap has no class that plays that role — <code>invalid-feedback</code> is presentation only. So the Bootstrap class is added <em>alongside</em> it rather than replacing it. Replacing it would also hide the error summary, because <code>.invalid-feedback</code> stays <code>display: none</code> until an <code>.is-invalid</code> sibling reveals it — which a summary at the top of a form never has.</p></div>
+
+<h2 id="customising-the-summary">Customising the summary</h2>
+
+<p>
+  <code>errorMessageTemplate</code> builds the <code>errorMessagePosition: 'top'</code> summary.
+  Override any subset of its keys; whatever you leave out falls back to the default.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  errorMessagePosition: 'top',
+  errorMessageTemplate: {
+    container: '&lt;section class=&quot;{errorMessageClass}&quot; role=&quot;alert&quot;&gt;{messages}&lt;/section&gt;',
+    messages: '&lt;h2&gt;{errorTitle}&lt;/h2&gt;&lt;ol&gt;{fields}&lt;/ol&gt;',
+    field: '&lt;li&gt;&lt;a href=&quot;#{id}&quot;&gt;{msg}&lt;/a&gt;&lt;/li&gt;',
+    fieldNoLink: '&lt;li&gt;{msg}&lt;/li&gt;'
+  }
+});</code></pre></div>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Placeholder</th><th>Available in</th><th>Meaning</th></tr></thead><tbody><tr><td><code>{errorMessageClass}</code></td><td><code>container</code></td><td>The configured <code>errorMessageClass</code>.</td></tr><tr><td><code>{messages}</code></td><td><code>container</code></td><td>The rendered <code>messages</code> template.</td></tr><tr><td><code>{errorTitle}</code></td><td><code>messages</code></td><td>The <code>errorTitle</code> language string.</td></tr><tr><td><code>{fields}</code></td><td><code>messages</code></td><td>The rendered <code>field</code> templates, concatenated.</td></tr><tr><td><code>{msg}</code></td><td><code>field</code>, <code>fieldNoLink</code></td><td>The validation message.</td></tr><tr><td><code>{id}</code></td><td><code>field</code></td><td>The id of the field, generated if it has none — this is what makes the summary navigable.</td></tr></tbody></table></div>
+
+<div class="callout note"><span class="callout-title">Substitution is single pass</span><p>A validation message that happens to contain something like <code>{fields}</code> is inserted literally rather than being treated as a placeholder.</p></div>
+
+<h3 id="taking-over-display-entirely">Taking over display entirely</h3>
+
+<p>
+  For full control, return your own container from a callback — or return something falsy to
+  suppress the plugin's rendering and do it all yourself.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  inlineErrorMessageCallback: function ($input, errorMsg, conf) {
+    // Write the message wherever your layout wants it…
+    return $input.closest('.field').find('.field-error');
+  },
+
+  submitErrorMessageCallback: function ($form, errorMessages, conf) {
+    myToast.show(errorMessages);
+    return false;   // nothing rendered by the plugin
+  }
+});</code></pre></div>
+
+<h2 id="per-field-attributes">Per-field attributes</h2>
+
+<p>
+  Configuration also happens in the markup. These apply to any field, whatever rules it carries.
+</p>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Attribute</th><th>Effect</th></tr></thead><tbody><tr><td><code>data-validation</code></td><td>The rules, space separated.</td></tr><tr><td><code>data-validation-optional="true"</code></td><td>Only validate when a value has been entered.</td></tr><tr><td><code>data-validation-error-msg</code></td><td>Custom message for this field.</td></tr><tr><td><code>data-validation-error-msg-<em>rule</em></code></td><td>Custom message for one specific rule.</td></tr><tr><td><code>data-validation-help</code></td><td>Help text shown while the field has focus.</td></tr><tr><td><code>data-validation-error-msg-container</code></td><td>Selector for where this field's message should be written.</td></tr><tr><td><code>data-validation-event</code></td><td>Validate on this event, with <code>validateOnEvent: true</code>.</td></tr><tr><td><code>data-validation-ignore</code></td><td>Characters stripped from the value before validating.</td></tr><tr><td><code>data-suggestions</code></td><td>Comma separated suggestions offered as the user types.</td></tr><tr><td><code>data-sanitize</code></td><td>Sanitizers to run first. Needs the <code>sanitize</code> module.</td></tr></tbody></table></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input name=&quot;phone&quot;
+       data-validation=&quot;required&quot;
+       data-validation-ignore=&quot; -()&quot;
+       data-validation-help=&quot;Digits only; spaces and dashes are fine&quot;
+       data-validation-error-msg=&quot;We need a phone number&quot;&gt;</code></pre></div>
+
+<nav class="page-nav" aria-label="Page navigation"><a class="prev" href="modules.html"><span class="dir">← Previous</span><span class="ttl">Modules</span></a><a class="next" href="api.html"><span class="dir">Next →</span><span class="ttl">JavaScript API</span></a></nav>
+    </div>
+  </main>
+
+  <aside class="toc" aria-label="On this page">
+    <h2>On this page</h2>
+    <ul class="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <p>jQuery Form Validator 4.2.0 — MIT licensed.
+     <a href="https://github.com/premento/jQuery-Form-Validator">Source on GitHub</a></p>
+</footer>
+
+<script src="assets/js/search-index.js"></script>
+<script src="assets/js/docs.js"></script>
+
+</body>
+</html>

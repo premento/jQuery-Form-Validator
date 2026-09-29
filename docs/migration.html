@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upgrading · jQuery Form Validator</title>
+<meta name="description" content="What changed between 2.x and 3.0/4.x: breaking changes, deprecations, removals and the validator bugs that were fixed.">
+<link rel="stylesheet" href="assets/css/docs.css">
+
+<script>
+  /* Set the theme before first paint so a dark-mode reader never gets a
+     white flash. Deliberately inline and synchronous. */
+  (function () {
+    try {
+      var t = localStorage.getItem('jfv-docs-theme');
+      if (t) { document.documentElement.setAttribute('data-theme', t); }
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body data-base="">
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <button class="icon-btn nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+
+  <a class="brand" href="index.html" aria-label="jQuery Form Validator documentation, home">
+    <span class="brand-mark" aria-hidden="true">✓</span>
+    <span class="brand-text">jQuery Form Validator</span>
+  </a>
+  <span class="version-badge">v4.2.0</span>
+
+  <span class="header-spacer"></span>
+
+  <div class="search" role="search">
+    <label class="skip-link" for="docs-search">Search documentation</label>
+    <input id="docs-search" type="search" placeholder="Search docs…  /" autocomplete="off"
+           role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list">
+    <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>
+  </div>
+
+  <div class="header-actions">
+    <a class="header-link hide-sm" href="https://github.com/premento/jQuery-Form-Validator">GitHub</a>
+    <button class="icon-btn theme-toggle" type="button" aria-label="Switch theme">☾</button>
+  </div>
+</header>
+
+<div class="sidebar-backdrop"></div>
+
+<div class="layout with-toc">
+  <nav class="sidebar" aria-label="Documentation">
+    <h2>Introduction</h2><ul><li><a href="index.html">Overview</a></li><li><a href="getting-started.html">Getting started</a></li><li><a href="examples.html">Examples</a></li></ul><h2>Reference</h2><ul><li><a href="validators.html">Validators</a></li><li><a href="modules.html">Modules</a></li><li><a href="configuration.html">Configuration</a></li><li><a href="api.html">JavaScript API</a></li></ul><h2>Guides</h2><ul><li><a href="accessibility.html">Accessibility</a></li><li><a href="localization.html">Localization</a></li><li><a href="migration.html" aria-current="page">Upgrading</a></li></ul>
+  </nav>
+
+  <main class="content" id="main">
+    <div class="content-inner">
+
+<h1>Upgrading from 2.x</h1>
+<p class="lede">
+  Most forms need no changes at all. The <code>data-validation</code> attribute API is unchanged,
+  and <code>$.validate()</code> still does what it always did. The list below is everything that
+  could behave differently.
+</p>
+
+<h2 id="start-here">Start here</h2>
+
+<ol>
+  <li>Upgrade and run your forms. Most will simply work.</li>
+  <li>Check the console — every deprecation logs a warning naming its replacement.</li>
+  <li>Re-check anything using <code>data-validation-strength</code>; the scoring changed.</li>
+  <li>If you are on Bootstrap 4 or 5, add <code>bootstrap: 5</code> to pick up the right class
+      names.</li>
+</ol>
+
+<h2 id="breaking-changes">Breaking changes</h2>
+
+<h3 id="password-strength-was-rescored">Password strength was rescored</h3>
+
+<p>
+  This is the change most likely to affect an existing form. The old scoring awarded points for
+  character composition — mixed case, digits, symbols — which NIST SP 800-63B rev 4 retired,
+  because it rewards short predictable passwords over long ones.
+</p>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Password</th><th>Old score</th><th>New score</th></tr></thead><tbody><tr><td><code>P@ss1!</code></td><td>3</td><td><strong>0</strong></td></tr><tr><td><code>Tr0ub4dor&amp;3</code></td><td>3</td><td><strong>1</strong></td></tr><tr><td><code>abcdefghijklmnop</code></td><td>2</td><td><strong>0</strong></td></tr><tr><td><code>thequickbrownfox</code></td><td>2</td><td><strong>3</strong></td></tr><tr><td><code>correcthorsebatterystaple</code></td><td>3</td><td>3</td></tr></tbody></table></div>
+
+<p>
+  The attribute, the 0–3 scale and the thresholds are unchanged — only the scoring. Re-check any
+  form that relies on a particular <code>data-validation-strength</code> level.
+</p>
+
+<h3 id="validation-follows-the-value-not-the-keyboard">Validation follows the value, not the keyboard</h3>
+
+<p>
+  Live re-validation is bound to <code>input</code> rather than <code>keyup</code>. A field
+  corrected by paste, autofill, drag-and-drop, speech input or IME composition is now caught;
+  before, it stayed marked invalid until the next keystroke.
+</p>
+
+<p>
+  If you wrote a custom validator that opted out with <code>validateOnKeyUp: false</code>, that is
+  still honoured, but the option is now called <code>validateOnInput</code>.
+</p>
+
+<h3 id="novalidate-is-added-by-default"><code>novalidate</code> is added by default</h3>
+
+<p>
+  So the browser does not stack its own error bubbles on top of the plugin's messages. Set
+  <code>novalidate: false</code> to go back. A <code>novalidate</code> attribute you wrote
+  yourself is never removed either way.
+</p>
+
+<h3 id="old-browser-shims-were-removed">Old-browser shims were removed</h3>
+
+<p>
+  The <code>placeholder</code> and <code>datalist</code> shims are gone from the
+  <code>html5</code> module, as is the IE7 branch in the module loader. Every supported browser
+  implements all three natively.
+</p>
+
+<h2 id="deprecated">Deprecated</h2>
+
+<p>These still work and log a warning naming the replacement.</p>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Deprecated</th><th>Use instead</th></tr></thead><tbody><tr><td><code>data-validation="complexity"</code></td><td><code>strength</code>, ideally with <code>breached</code></td></tr><tr><td><code>$.fn.validateOnKeyUp</code></td><td><code>$.fn.validateOnInput</code></td></tr><tr><td><code>$.fn.removeKeyUpValidation</code></td><td><code>$.fn.removeInputValidation</code></td></tr><tr><td><code>$.fn.validateForm</code></td><td><code>$.fn.isValid</code></td></tr><tr><td><code>validateOnKeyUp: false</code> on a validator</td><td><code>validateOnInput: false</code></td></tr><tr><td><code>errorMessageCustom</code></td><td><code>submitErrorMessageCallback</code></td></tr><tr><td><code>data-validation-if-checked</code></td><td><code>data-validation-depends-on</code> (logic module)</td></tr></tbody></table></div>
+
+<h2 id="validator-bugs-fixed">Validator bugs fixed</h2>
+
+<p>
+  Five validators regressed in 2.3.79. Each had a failing test in the suite that was never green;
+  all are corrected.
+</p>
+
+<h3 id="internationalised-domains-were-rejected">Internationalised domains were rejected</h3>
+
+<p>
+  The top-level domain had to be entirely alphanumeric, which turns away every IDN A-label since
+  those contain hyphens — <code>test.xn--fiqz9s</code> (.中国) among them. TLDs that genuinely
+  start or end with a hyphen are still rejected. This fixed URL validation too, which delegates to
+  the domain validator.
+</p>
+
+<h3 id="the-cvv-validator-never-learned-the-card-type">The CVV validator never learned the card type</h3>
+
+<p>
+  The credit card validator works out whether the form accepts American Express, which decides
+  whether a CVV is three digits or four. That was being written to the card element and read from
+  the CVV element — different elements, so it never arrived, and an amex-only form rejected valid
+  four-digit codes. It now lives on the form, which both fields can see, and still cannot leak
+  between two forms on one page.
+</p>
+
+<h3 id="10236-was-accepted-as-an-integer"><code>1.0236</code> was accepted as an integer</h3>
+
+<p>
+  With <code>decimal-separator</code> set to <code>,</code>, every dot was being stripped
+  unconditionally — turning a dot used as a decimal point into <code>10236</code>. Dots must now
+  fall on a group boundary, so <code>1.234.567,89</code> is accepted and <code>1.0236</code> is
+  not.
+</p>
+
+<h3 id="a-date-format-without-a-day-was-always-invalid">A date format without a day was always invalid</h3>
+
+<p>
+  <code>mm/yyyy</code> is a legitimate format, but an absent unit was reported internally as
+  <code>-1</code> and then treated as an invalid zero. Absent units are now skipped, and come back
+  as <code>1</code> so date arithmetic still works.
+</p>
+
+<h3 id="a-malformed-quoted-email-was-accepted">A malformed quoted email was accepted</h3>
+
+<p>
+  <code>"sasas-sdsd"sdfsdf.sdff@monkey.com</code> is not a valid address: RFC 5322 gives
+  <code>obs-local-part = word *("." word)</code>, and a quoted string followed straight by more
+  text with no dot between them is not a valid word sequence. It is now rejected. Fully quoted
+  local parts such as <code>"sasas-sdsd"@monkey.com</code> are still accepted.
+</p>
+
+<h2 id="new-in-30-and-4x">New in 3.0 and 4.x</h2>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Addition</th><th>Where</th></tr></thead><tbody><tr><td>Accessibility: <code>aria-invalid</code>, <code>aria-describedby</code>, live regions, focus management</td><td><a href="accessibility.html">Accessibility</a></td></tr><tr><td><code>native</code> module — Constraint Validation API bridge</td><td><a href="modules.html#module-native">Modules</a></td></tr><tr><td><code>breached</code> validator — Have I Been Pwned screening</td><td><a href="validators.html#breached">Validators</a></td></tr><tr><td>Bootstrap 4 and 5 class-name presets</td><td><a href="configuration.html#bootstrap-presets">Configuration</a></td></tr><tr><td><code>errorMessageTemplate</code> — documented since 2.x, honoured from 3.0</td><td><a href="configuration.html#customising-the-summary">Configuration</a></td></tr><tr><td>Debounced async validation, and <code>aria-busy</code> instead of disabling the field</td><td><a href="api.html#custom-validators">API</a></td></tr><tr><td><code>observeDynamicFields</code> — a <code>MutationObserver</code> for fields added later</td><td><a href="configuration.html">Configuration</a></td></tr><tr><td>Sentence templates with <code>Intl.PluralRules</code> plural forms</td><td><a href="localization.html#message-templates">Localization</a></td></tr><tr><td><code>localeNumberFormat</code> sanitizer, and <code>decimalSeparator: 'auto'</code></td><td><a href="localization.html#numbers">Localization</a></td></tr><tr><td>ESM build, <code>exports</code> map and TypeScript declarations</td><td><a href="getting-started.html#installing">Getting started</a></td></tr></tbody></table></div>
+
+<h2 id="packaging">Packaging</h2>
+
+<p>
+  The package now ships an <code>exports</code> map, an ESM build and TypeScript declarations.
+  The UMD bundle is still there and <code>main</code> still points at it, so a
+  <code>&lt;script&gt;</code> tag keeps working exactly as before.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">// All three resolve correctly
+import  jQuery from 'jquery-form-validator';
+const   jQuery = require('jquery-form-validator');</code></pre></div>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;script src=&quot;form-validator/jquery.form-validator.min.js&quot;&gt;&lt;/script&gt;</code></pre></div>
+
+<div class="callout note"><span class="callout-title">Runtime script injection is gone</span><p>Modules used to be fetched by injecting a <code>&lt;script&gt;</code> tag whose path was discovered by sniffing the DOM. That broke under bundlers and under a strict Content-Security-Policy. <code>$.formUtils.loadModules()</code> still works for pages that rely on it; an <code>import</code> is now the better path.</p></div>
+
+<h2 id="a-naming-caveat-worth-knowing">A naming caveat worth knowing</h2>
+
+<div class="callout warning"><span class="callout-title">Module and rule names cannot contain a hyphen</span><p>The plugin splits comma, space <em>and</em> hyphen separated lists with the same helper, so a module named <code>constraint-api</code> would be requested as two files and fail silently. This is why the Constraint Validation bridge is called <code>native</code>. It applies to any rule name you add yourself.</p></div>
+
+<nav class="page-nav" aria-label="Page navigation"><a class="prev" href="localization.html"><span class="dir">← Previous</span><span class="ttl">Localization</span></a></nav>
+    </div>
+  </main>
+
+  <aside class="toc" aria-label="On this page">
+    <h2>On this page</h2>
+    <ul class="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <p>jQuery Form Validator 4.2.0 — MIT licensed.
+     <a href="https://github.com/premento/jQuery-Form-Validator">Source on GitHub</a></p>
+</footer>
+
+<script src="assets/js/search-index.js"></script>
+<script src="assets/js/docs.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accessibility · jQuery Form Validator</title>
+<meta name="description" content="How the plugin reports errors to assistive technology: aria-invalid, aria-describedby, live regions, focus management and the error summary pattern.">
+<link rel="stylesheet" href="assets/css/docs.css">
+
+<script>
+  /* Set the theme before first paint so a dark-mode reader never gets a
+     white flash. Deliberately inline and synchronous. */
+  (function () {
+    try {
+      var t = localStorage.getItem('jfv-docs-theme');
+      if (t) { document.documentElement.setAttribute('data-theme', t); }
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body data-base="">
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <button class="icon-btn nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+
+  <a class="brand" href="index.html" aria-label="jQuery Form Validator documentation, home">
+    <span class="brand-mark" aria-hidden="true">✓</span>
+    <span class="brand-text">jQuery Form Validator</span>
+  </a>
+  <span class="version-badge">v4.2.0</span>
+
+  <span class="header-spacer"></span>
+
+  <div class="search" role="search">
+    <label class="skip-link" for="docs-search">Search documentation</label>
+    <input id="docs-search" type="search" placeholder="Search docs…  /" autocomplete="off"
+           role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list">
+    <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>
+  </div>
+
+  <div class="header-actions">
+    <a class="header-link hide-sm" href="https://github.com/premento/jQuery-Form-Validator">GitHub</a>
+    <button class="icon-btn theme-toggle" type="button" aria-label="Switch theme">☾</button>
+  </div>
+</header>
+
+<div class="sidebar-backdrop"></div>
+
+<div class="layout with-toc">
+  <nav class="sidebar" aria-label="Documentation">
+    <h2>Introduction</h2><ul><li><a href="index.html">Overview</a></li><li><a href="getting-started.html">Getting started</a></li><li><a href="examples.html">Examples</a></li></ul><h2>Reference</h2><ul><li><a href="validators.html">Validators</a></li><li><a href="modules.html">Modules</a></li><li><a href="configuration.html">Configuration</a></li><li><a href="api.html">JavaScript API</a></li></ul><h2>Guides</h2><ul><li><a href="accessibility.html" aria-current="page">Accessibility</a></li><li><a href="localization.html">Localization</a></li><li><a href="migration.html">Upgrading</a></li></ul>
+  </nav>
+
+  <main class="content" id="main">
+    <div class="content-inner">
+
+<h1>Accessibility</h1>
+<p class="lede">
+  A red border tells a sighted mouse user something is wrong. It tells a screen reader user
+  nothing at all. Since 3.0 every error this plugin shows is also reported as text, associated
+  with the field it belongs to.
+</p>
+
+<div class="callout note"><span class="callout-title">This is on by default</span><p>There is nothing to enable. The only related option is <code>focusOnError</code>, which is already <code>true</code>.</p></div>
+
+<h2 id="what-the-plugin-emits">What the plugin emits</h2>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Feature</th><th>Behaviour</th></tr></thead><tbody><tr><td><code>aria-invalid</code></td><td>Set to <code>"true"</code> on a failing field, in both inline and summary modes. Removed — not set to <code>"false"</code> — once the field passes, so an unvalidated field makes no claim either way.</td></tr><tr><td><code>aria-describedby</code></td><td>Points the field at the element holding its message, so a screen reader reads the reason when the field is focused.</td></tr><tr><td><code>aria-live="polite"</code></td><td>On inline messages, so an error appearing on blur is announced without interrupting what the visitor is typing next.</td></tr><tr><td><code>role="alert"</code></td><td>On the error summary.</td></tr><tr><td>Focus management</td><td>On a failed submit, focus moves to the summary, or to the first invalid field in inline mode.</td></tr><tr><td><code>aria-busy</code></td><td>On a field while an asynchronous check is in flight.</td></tr><tr><td>Reduced motion</td><td>Help-text fades are skipped when the visitor has asked for reduced motion.</td></tr></tbody></table></div>
+
+<h2 id="your-aria-describedby-is-preserved">Your aria-describedby is preserved</h2>
+
+<p>
+  Fields often already point at hint text. The plugin <em>appends</em> its own token rather than
+  replacing what is there, and on cleanup removes only the token it added.
+</p>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;label for=&quot;pw&quot;&gt;Password&lt;/label&gt;
+&lt;span id=&quot;pw-hint&quot;&gt;At least 12 characters.&lt;/span&gt;
+&lt;input id=&quot;pw&quot; type=&quot;password&quot; aria-describedby=&quot;pw-hint&quot;
+       data-validation=&quot;strength&quot;&gt;</code></pre></div>
+
+<div class="code-block"><div class="code-label"><span>What the plugin produces</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;!-- While invalid --&gt;
+&lt;input id=&quot;pw&quot; aria-describedby=&quot;pw-hint jfv-error-pw-1&quot; aria-invalid=&quot;true&quot;&gt;
+
+&lt;!-- Once corrected — your hint survives --&gt;
+&lt;input id=&quot;pw&quot; aria-describedby=&quot;pw-hint&quot;&gt;</code></pre></div>
+
+<h2 id="the-error-summary">The error summary</h2>
+
+<p>
+  With <code>errorMessagePosition: 'top'</code> the plugin renders one summary above the form.
+  It is a <code>role="alert"</code>, receives focus on a failed submit, and every entry is a link
+  to the field it describes — so the summary can be navigated by keyboard, not merely read.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  errorMessagePosition: 'top'
+});</code></pre></div>
+
+<div class="code-block"><div class="code-label"><span>What the plugin produces</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;div class=&quot;form-error alert alert-danger&quot; role=&quot;alert&quot; tabindex=&quot;-1&quot;&gt;
+  &lt;strong&gt;Form submission failed!&lt;/strong&gt;
+  &lt;ul&gt;
+    &lt;li&gt;&lt;a href=&quot;#email&quot;&gt;You have not given a correct e-mail address&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a href=&quot;#jfv-field-age-1&quot;&gt;The input value is shorter than 2 characters&lt;/a&gt;&lt;/li&gt;
+  &lt;/ul&gt;
+&lt;/div&gt;</code></pre></div>
+
+<p>
+  Fields without an <code>id</code> are given a generated one so the link has somewhere to point.
+  That is what <code>{id}</code> means in
+  <a href="configuration.html#customising-the-summary">the summary template</a>.
+</p>
+
+<div class="callout tip"><span class="callout-title">Prefer the summary on longer forms</span><p>When a failed submit produces several errors at once, one focusable list is far easier to work through than hunting for messages scattered down the page. It is also the pattern most assistive technology users will recognise.</p></div>
+
+<h2 id="what-the-theme-handles">What the theme handles</h2>
+
+<p>The bundled stylesheet was corrected in 3.0 to meet WCAG 2.2 AA:</p>
+
+<ul>
+  <li><strong>Contrast.</strong> Error text is <code>#843534</code>, which clears 4.5:1 against
+      the summary background. The previous <code>#b94a48</code> managed only 3.93:1.</li>
+  <li><strong>Not colour alone.</strong> Invalid fields carry an icon as well as a red border,
+      and inline messages are prefixed with a warning marker — WCAG 1.4.1.</li>
+  <li><strong>Target size.</strong> Summary links are at least 24&nbsp;px tall — WCAG 2.2
+      SC 2.5.8.</li>
+  <li><strong>Reduced motion.</strong> Transitions and animations are disabled when the visitor
+      has asked for that.</li>
+</ul>
+
+<div class="callout warning"><span class="callout-title">The plugin cannot label your fields</span><p>It reports errors accessibly, but it cannot invent a <code>&lt;label&gt;</code> you did not write. Every field still needs one, associated by <code>for</code>/<code>id</code> or by wrapping. That is the single most common form accessibility failure and it is outside what any validation library can fix.</p></div>
+
+<h2 id="working-with-the-browser">Working with the browser</h2>
+
+<p>
+  <code>novalidate</code> is added to the form by default, so the browser does not stack its own
+  error bubbles on top of the plugin's messages. A <code>novalidate</code> attribute you wrote
+  yourself is never removed.
+</p>
+
+<p>
+  Loading the <a href="modules.html#module-native"><code>native</code> module</a> mirrors every
+  result onto the element, which means <code>:user-invalid</code> and
+  <code>form.checkValidity()</code> agree with your rules — useful if your CSS already styles
+  those states.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  modules: 'native',
+  novalidate: true   // the default
+});</code></pre></div>
+
+<h2 id="using-the-helpers-yourself">Using the helpers yourself</h2>
+
+<p>
+  If you take over error display with
+  <a href="configuration.html#customising-the-summary"><code>inlineErrorMessageCallback</code></a>,
+  the ARIA wiring is available so your own markup can behave the same way.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  inlineErrorMessageCallback: function ($input, errorMsg, conf) {
+    var $slot = $input.closest('.field').find('.field-error');
+
+    if (errorMsg) {
+      $slot.text(errorMsg);
+      $.formUtils.a11y.describeError($input, $slot);
+    } else {
+      $.formUtils.a11y.clearError($input);
+    }
+
+    return false;   // we rendered it ourselves
+  }
+});</code></pre></div>
+
+<h2 id="testing-your-forms">Testing your forms</h2>
+
+<p>Automated checks catch some of this. These are the parts worth doing by hand:</p>
+
+<ul>
+  <li><strong>Keyboard only.</strong> Submit an empty form. Focus should land on the summary, and
+      each entry should take you to its field.</li>
+  <li><strong>Screen reader.</strong> With NVDA, JAWS or VoiceOver, confirm the error is announced
+      on blur, and that focusing a failed field re-reads the reason.</li>
+  <li><strong>Zoom and reflow.</strong> At 200% zoom and 320&nbsp;px width, messages should stay
+      attached to their fields.</li>
+  <li><strong>Colour.</strong> Turn on a greyscale filter. Every error should still be
+      identifiable.</li>
+</ul>
+
+<div class="callout note"><span class="callout-title">Where this was verified</span><p>The bundled theme and the markup the plugin emits were checked with axe-core against the project's own test forms, in both inline and summary modes, with zero violations attributable to the plugin. Your own markup — labels, headings, landmarks — is still yours to get right.</p></div>
+
+<nav class="page-nav" aria-label="Page navigation"><a class="prev" href="api.html"><span class="dir">← Previous</span><span class="ttl">JavaScript API</span></a><a class="next" href="localization.html"><span class="dir">Next →</span><span class="ttl">Localization</span></a></nav>
+    </div>
+  </main>
+
+  <aside class="toc" aria-label="On this page">
+    <h2>On this page</h2>
+    <ul class="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <p>jQuery Form Validator 4.2.0 — MIT licensed.
+     <a href="https://github.com/premento/jQuery-Form-Validator">Source on GitHub</a></p>
+</footer>
+
+<script src="assets/js/search-index.js"></script>
+<script src="assets/js/docs.js"></script>
+
+</body>
+</html>

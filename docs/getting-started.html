@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Getting started · jQuery Form Validator</title>
+<meta name="description" content="Install jQuery Form Validator from a script tag, npm or an ES module import, then validate your first form.">
+<link rel="stylesheet" href="assets/css/docs.css">
+
+<script>
+  /* Set the theme before first paint so a dark-mode reader never gets a
+     white flash. Deliberately inline and synchronous. */
+  (function () {
+    try {
+      var t = localStorage.getItem('jfv-docs-theme');
+      if (t) { document.documentElement.setAttribute('data-theme', t); }
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body data-base="">
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <button class="icon-btn nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+
+  <a class="brand" href="index.html" aria-label="jQuery Form Validator documentation, home">
+    <span class="brand-mark" aria-hidden="true">✓</span>
+    <span class="brand-text">jQuery Form Validator</span>
+  </a>
+  <span class="version-badge">v4.2.0</span>
+
+  <span class="header-spacer"></span>
+
+  <div class="search" role="search">
+    <label class="skip-link" for="docs-search">Search documentation</label>
+    <input id="docs-search" type="search" placeholder="Search docs…  /" autocomplete="off"
+           role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list">
+    <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>
+  </div>
+
+  <div class="header-actions">
+    <a class="header-link hide-sm" href="https://github.com/premento/jQuery-Form-Validator">GitHub</a>
+    <button class="icon-btn theme-toggle" type="button" aria-label="Switch theme">☾</button>
+  </div>
+</header>
+
+<div class="sidebar-backdrop"></div>
+
+<div class="layout with-toc">
+  <nav class="sidebar" aria-label="Documentation">
+    <h2>Introduction</h2><ul><li><a href="index.html">Overview</a></li><li><a href="getting-started.html" aria-current="page">Getting started</a></li><li><a href="examples.html">Examples</a></li></ul><h2>Reference</h2><ul><li><a href="validators.html">Validators</a></li><li><a href="modules.html">Modules</a></li><li><a href="configuration.html">Configuration</a></li><li><a href="api.html">JavaScript API</a></li></ul><h2>Guides</h2><ul><li><a href="accessibility.html">Accessibility</a></li><li><a href="localization.html">Localization</a></li><li><a href="migration.html">Upgrading</a></li></ul>
+  </nav>
+
+  <main class="content" id="main">
+    <div class="content-inner">
+
+<h1>Getting started</h1>
+<p class="lede">
+  Add the script, put <code>data-validation</code> on the fields that need checking, and call
+  <code>$.validate()</code>. Everything after that is refinement.
+</p>
+
+<h2 id="requirements">Requirements</h2>
+
+<p>
+  jQuery 1.8 or newer, including jQuery 3 and jQuery 4. No other runtime dependency.
+  <code>numeral.js</code> is optional and only relevant to one sanitizer.
+</p>
+
+<h2 id="installing">Installing</h2>
+
+<h3 id="script-tag">Script tag</h3>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;script src=&quot;https://code.jquery.com/jquery-3.7.1.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;form-validator/jquery.form-validator.min.js&quot;&gt;&lt;/script&gt;</code></pre></div>
+
+<p>
+  Modules live beside the core file and are fetched on demand when you name them in
+  <code>modules</code>. Point the plugin somewhere else with an explicit path if your
+  layout differs:
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  modules: 'security, date'
+});
+
+// Or load them yourself, from a path of your choosing:
+$.formUtils.loadModules('security, date', '/assets/js/form-validator/');</code></pre></div>
+
+<h3 id="npm">npm</h3>
+
+<div class="code-block"><div class="code-label"><span>Terminal</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="bash">npm install jquery-form-validator</code></pre></div>
+
+<h3 id="es-modules">ES modules</h3>
+
+<p>
+  Every module is a real entry point, so a bundler resolves it statically. Importing a module
+  registers its validators — there is no runtime script injection, which also means the plugin
+  works under a strict Content-Security-Policy.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">import jQuery from 'jquery-form-validator';
+import 'jquery-form-validator/modules/security';
+import 'jquery-form-validator/lang/sv';
+import 'jquery-form-validator/css';
+
+jQuery.validate({ lang: 'sv' });</code></pre></div>
+
+<div class="callout note"><span class="callout-title">Modules you import are not fetched again</span><p>If a module has already registered itself through an <code>import</code>, naming it in <code>modules</code> is a no-op rather than a second network request. Mixing the two styles is safe.</p></div>
+
+<h3 id="commonjs">CommonJS</h3>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">const jQuery = require('jquery-form-validator');
+require('jquery-form-validator/modules/security');</code></pre></div>
+
+<h3 id="typescript">TypeScript</h3>
+
+<p>
+  Declarations ship with the package, so <code>$.validate()</code>, the configuration object
+  and <code>$.formUtils</code> are all typed. Nothing to install separately.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">import 'jquery-form-validator';
+
+$.validate({
+  modules: 'security',
+  errorMessagePosition: 'top',
+  onSuccess: function ($form) { return true; }
+});</code></pre></div>
+
+<h2 id="your-first-form">Your first form</h2>
+
+<p>Three fields, three rules, one call.</p>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;form action=&quot;/signup&quot; method=&quot;post&quot; id=&quot;signup&quot;&gt;
+  &lt;p&gt;
+    &lt;label for=&quot;name&quot;&gt;Name&lt;/label&gt;
+    &lt;input id=&quot;name&quot; name=&quot;name&quot; data-validation=&quot;required&quot;&gt;
+  &lt;/p&gt;
+  &lt;p&gt;
+    &lt;label for=&quot;email&quot;&gt;Email&lt;/label&gt;
+    &lt;input id=&quot;email&quot; name=&quot;email&quot; data-validation=&quot;email&quot;&gt;
+  &lt;/p&gt;
+  &lt;p&gt;
+    &lt;label for=&quot;pw&quot;&gt;Password&lt;/label&gt;
+    &lt;input id=&quot;pw&quot; name=&quot;pw&quot; type=&quot;password&quot;
+           data-validation=&quot;length&quot; data-validation-length=&quot;min12&quot;&gt;
+  &lt;/p&gt;
+  &lt;button type=&quot;submit&quot;&gt;Sign up&lt;/button&gt;
+&lt;/form&gt;</code></pre></div>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({ form: '#signup' });</code></pre></div>
+
+<p>
+  Rules are separated by spaces, so a field can carry several. They run in order and the first
+  failure is what gets reported:
+</p>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input name=&quot;email&quot; data-validation=&quot;required email&quot;&gt;</code></pre></div>
+
+<h2 id="making-a-rule-optional">Making a rule optional</h2>
+
+<p>
+  <code>data-validation-optional="true"</code> means "check this, but only if something was
+  entered". An empty value passes; a malformed one still fails.
+</p>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;input name=&quot;website&quot; data-validation=&quot;url&quot; data-validation-optional=&quot;true&quot;&gt;</code></pre></div>
+
+<h2 id="custom-messages">Custom messages</h2>
+
+<p>Per field, or per rule on that field:</p>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;!-- One message for whichever rule fails --&gt;
+&lt;input name=&quot;email&quot; data-validation=&quot;required email&quot;
+       data-validation-error-msg=&quot;We need an address to reach you on&quot;&gt;
+
+&lt;!-- A different message per rule --&gt;
+&lt;input name=&quot;email&quot; data-validation=&quot;required email&quot;
+       data-validation-error-msg-required=&quot;This one is required&quot;
+       data-validation-error-msg-email=&quot;That does not look like an email address&quot;&gt;</code></pre></div>
+
+<h2 id="where-errors-appear">Where errors appear</h2>
+
+<p>
+  By default each message is written next to its field. Setting
+  <code>errorMessagePosition: 'top'</code> collects them into a single summary above the form
+  instead, with every entry linking to the field it describes.
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({
+  errorMessagePosition: 'top'   // 'inline' is the default
+});</code></pre></div>
+
+<div class="callout tip"><span class="callout-title">Pick the summary for long forms</span><p>A summary is easier to act on when a failed submit produces several errors at once, and it is the pattern assistive technology users are most likely to expect. Focus moves into it automatically. See <a href="accessibility.html#the-error-summary">the error summary</a>.</p></div>
+
+<h2 id="when-validation-runs">When validation runs</h2>
+
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table, scrollable"><table><thead><tr><th>Moment</th><th>What happens</th></tr></thead><tbody><tr><td>On submit</td><td>Every field is validated. Submission is blocked if any fail.</td></tr><tr><td>On blur</td><td>The field that lost focus is validated. Controlled by <code>validateOnBlur</code>.</td></tr><tr><td>While typing</td><td>Only after a field has already failed — it then re-checks on every <code>input</code> event so the fix is confirmed immediately.</td></tr><tr><td>On click</td><td>Checkboxes and radios validate as soon as they are clicked. Controlled by <code>validateCheckboxRadioOnClick</code>.</td></tr><tr><td>On a named event</td><td>With <code>validateOnEvent: true</code>, an element carrying <code>data-validation-event="change"</code> validates on that event.</td></tr></tbody></table></div>
+
+<div class="callout note"><span class="callout-title">Why &lt;code&gt;input&lt;/code&gt; and not &lt;code&gt;keyup&lt;/code&gt;</span><p>A value can change without a key ever being released — paste, autofill, drag-and-drop, speech input, IME composition. Those were all invisible to the key-event handling used before 3.0, which left a corrected field still showing an error.</p></div>
+
+<h2 id="adding-the-stylesheet">Adding the stylesheet</h2>
+
+<p>
+  A default theme ships with the package. It is entirely optional — the plugin only adds class
+  names, so your own CSS can take over completely.
+</p>
+
+<div class="code-block"><div class="code-label"><span>HTML</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="html">&lt;link rel=&quot;stylesheet&quot; href=&quot;form-validator/theme-default.css&quot;&gt;</code></pre></div>
+
+<p>
+  On a Bootstrap 4 or 5 page, skip the theme and tell the plugin which release you are on so it
+  emits the class names that framework already styles:
+</p>
+
+<div class="code-block"><div class="code-label"><span>JavaScript</span><button class="copy-btn" type="button">Copy</button></div><pre><code data-lang="js">$.validate({ bootstrap: 5 });</code></pre></div>
+
+<h2 id="next-steps">Next steps</h2>
+
+<ul>
+  <li><a href="validators.html">Validator reference</a> — every rule and its attributes.</li>
+  <li><a href="modules.html">Modules</a> — what each one adds and how to load it.</li>
+  <li><a href="configuration.html">Configuration</a> — the complete options list.</li>
+  <li><a href="examples.html">Live examples</a> — working forms to try.</li>
+</ul>
+
+<nav class="page-nav" aria-label="Page navigation"><a class="prev" href="index.html"><span class="dir">← Previous</span><span class="ttl">Overview</span></a><a class="next" href="examples.html"><span class="dir">Next →</span><span class="ttl">Examples</span></a></nav>
+    </div>
+  </main>
+
+  <aside class="toc" aria-label="On this page">
+    <h2>On this page</h2>
+    <ul class="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <p>jQuery Form Validator 4.2.0 — MIT licensed.
+     <a href="https://github.com/premento/jQuery-Form-Validator">Source on GitHub</a></p>
+</footer>
+
+<script src="assets/js/search-index.js"></script>
+<script src="assets/js/docs.js"></script>
+
+</body>
+</html>
